@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Lumenara",
+    "slug": "lumenara",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "lumenara",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#F4F4F6"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lumenara.app"
+    },
+    "android": {
+      "package": "com.lumenara.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#5B5BD6"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "25de0568-7aff-44ed-b9c8-b9fbe4e8260d"
+      }
+    }
+  }
+}
