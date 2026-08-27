@@ -1,0 +1,112 @@
+# Lumenara — Project Context
+
+Events app for **Stellenbosch, South Africa**. Users browse/save events and follow
+organisers; organisers create/manage events; admins approve organisers. Timezone is
+**Africa/Johannesburg (UTC+2)** — important for any date math.
+
+## Stack
+- **Expo (React Native)** with **Expo Router** (file-based routing; a file under `app/` = a route)
+- SDK 54, React 19, RN 0.81
+- **Supabase** backend (Postgres + Auth + Storage + RLS) on the business account
+- JavaScript (not TypeScript) for screens/components; `lib/supabase.ts` is the one TS file
+- Runs on an **Android emulator (Pixel 7)**. Metro is started from **Windows** (`npx expo start --go`),
+  files are edited from **WSL** — same folder on disk (`/mnt/c/Users/swane/lumenara` == `C:\Users\swane\lumenara`).
+  Emulator connects via `exp://10.0.2.2:8081`.
+
+## Project structure
+- `app/_layout.js` — root; wraps app in `SafeAreaProvider > ThemeProvider > AuthProvider`
+- `app/(tabs)/` — `index.js` (Home), `account.js`, `create.js`, `more.js`, `_layout.js` (tab bar)
+- `app/auth/` — `welcome.js`, `role-select.js`, `signup-user.js`, `signup-organizer.js`, `login.js`
+- `app/event/[id].js` — event detail
+- `app/organizer/[id].js` — organiser profile
+- `app/admin/approvals.js` — admin organiser approvals
+- `components/` — Button, Field, EventCard, EmptyState, CategoryChips, FeaturedCarousel,
+  BlurSheet (bottom sheet), PopModal (centre "pop" modal w/ blur), SignUpPrompt,
+  CalendarPicker, TimePicker
+- `lib/` — `supabase.ts`, `auth.js` (auth context), `api.js` (all Supabase queries),
+  `themeProvider.js` (light/dark palettes + `useTheme()`), `theme.js` (CATEGORIES/categoryLabel/
+  categoryStyle only — colours live in themeProvider), `format.js` (toISO, isPast, date formatters)
+
+## Key conventions
+- **Colours come from `useTheme()`**, not fixed values. Pattern: `const { colors, radius, space, shadow } = useTheme()`
+  then `const styles = makeStyles(colors, radius, space, shadow)`. `radius`/`space`/`shadow` are theme tokens;
+  `space(n)` = n*4. Never hardcode hex colours in screens — use `colors.x`.
+- **Dark mode** is complete across every screen + tab bar + Android nav bar. Three-way toggle
+  (System/Light/Dark) in More → Settings, persisted via AsyncStorage.
+- **Quick pickers** (calendar, category, time) use `PopModal` (centre pop). **Long forms**
+  (edit profile) also use `PopModal` now. `BlurSheet` (bottom sheet) still exists but is being phased out.
+- **Date math must be timezone-safe.** Do NOT use `new Date(iso + 'T00:00:00')` then `.setDate()` —
+  in UTC+2 that can roll wrong. Use UTC arithmetic: `new Date(Date.UTC(y, m-1, d))` + `setUTCDate`.
+  See `nextDay` in `app/(tabs)/create.js`.
+- Files are created/edited in place. Validate JSX before relying on it.
+
+## Data model (Supabase)
+- `profiles` (id→auth.users, role: user|organizer|admin, display_name)
+- `organizers` (id→profiles, name, bio, avatar_path, contact_email, status: pending|approved|rejected|suspended,
+  instagram_url/facebook_url/x_url/tiktok_url)
+- `events` (organizer_id, title[3-120], description[≤5000], category, venue, starts_at, ends_at,
+  image_path, published, is_featured, featured_order)
+- `saved_events` (user_id + event_id)
+- `follows` (user_id + organizer_id)
+- `category_placeholders`
+- **Enum `event_category`** (exact keys): sport, arts, music, food_and_drink, academic, nightlife, markets
+- Views: `upcoming_events`, `past_events`, `featured_events`, `organizer_stats` (has `follower_count`, `upcoming_count`)
+- Storage buckets (public): `avatars`, `event-images`, `placeholders` — write policies keyed on `{uid}/` folder prefix
+- Full schema in `setup.sql` (project root or outputs) — extensions, tables, RLS, triggers, functions, grants, buckets
+- **Grants matter**: RLS policies alone are insufficient; anon/authenticated need explicit GRANTs. Views need their own grants.
+
+## Auth / decisions
+- Email + password only (no Google/Apple)
+- Email confirmation ON (built-in Supabase email is capped at **2/hour** on free tier — needs custom SMTP/Resend to lift; parked pending a domain)
+- Organisers are reviewed (pending→approved by admin). Events go live immediately (no event review).
+- Duplicate-email signup now errors ("account already exists") via empty-`identities` check in `auth.js`
+- Admin account: swanepoeljimmy7@gmail.com
+- Approve organiser via SQL (trigger blocks SQL editor as non-app-admin):
+  `alter table organizers disable trigger organizers_status_guard; update organizers set status='approved' where contact_email='X'; alter table organizers enable trigger organizers_status_guard;`
+
+## Image upload pattern (reused for event images + avatars)
+```js
+const res = await fetch(uri)
+const arrayBuffer = await res.arrayBuffer()
+const path = `${uid}/${Date.now()}.jpg`
+await supabase.storage.from(BUCKET).upload(path, arrayBuffer, { contentType: 'image/jpeg', upsert: true })
+```
+Do NOT use `expo-file-system` readAsStringAsync (the base64 API broke). fetch→arrayBuffer is the working method.
+
+## Done recently
+- Full dark mode; date picker (reuses themed calendar, greys invalid dates); scroll-wheel time picker
+  (24h, 5-min steps); pop modals; create-form resets on focus; social brand icons (Ionicons logo-*);
+  organiser avatar upload (users have no avatar — that option was removed); admin approvals wired to real API;
+  duplicate-email error; end-time-before-start rolls end date to next day (timezone-safe).
+
+## Pending work
+### Follows block (next)
+- Show organiser **follower count** on the public organiser profile (users see it) — use `organizer_stats.follower_count`
+- Show follower **count** on the organiser's own account screen (count only, not who)
+- **Block self-follow**: hide Follow button when viewer == that organiser; add DB guard too
+- **Following list**: user taps "Following" → a **PopModal** (mist/blur bubble) listing organisers they follow,
+  each tappable to that profile. Needs a `fetchMyFollowing` query returning organiser name+avatar.
+- Organiser→organiser follows are **allowed** (only self-follow blocked)
+
+### Notifications block (after follows)
+- New `notifications` table (user_id, event_id, message, type[edited|deleted], read, created_at) + RLS
+- Edit-event screen (reuse create form, pre-filled) + delete button with confirm dialog
+- On edit (meaningful changes: date/time/venue) or delete, insert a notification row for every user who saved that event
+- Surface as a bell/notifications screen (in-app, NOT email — email needs Resend)
+
+### Parked
+- Forgot password + confirm-signup redirect (need custom SMTP / Resend + a domain)
+- Swipe between tabs (conflicts with horizontal scrollers: category chips, carousel)
+- Bucket 5MB size limits / MIME restrictions (pre-launch polish)
+- DB linter warnings (e.g. organizer_stats SECURITY DEFINER — intentional; pre-launch hardening pass)
+- Delete unused mockData.js/mockAuth.js; sweep test data ("Hhg" events, test accounts) before launch
+- App icon + splash for store builds
+
+## Infra notes
+- Version control: git initialised (via EAS). `.env` and `node_modules` are gitignored. `.env` holds
+  `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` (anon key is public/safe).
+- EAS dev build exists (`com.lumenara.app`) but Expo Go is the day-to-day workflow.
+- Free-tier Supabase **pauses after ~7 days idle** — if the app shows no data / can't log in, check the
+  dashboard for a paused banner and Resume it (takes a few min).
+- Emulator sometimes loses internet after laptop sleep — cold-boot it (Device Manager → Cold Boot Now) if
+  Chrome-in-emulator can't reach google.
