@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -7,10 +7,11 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import SignUpPrompt from '../../components/SignUpPrompt'
 import { useAuth } from '../../lib/auth'
 import { categoryLabel, categoryStyle } from '../../lib/theme'
@@ -20,9 +21,11 @@ import {
   fetchEventById,
   fetchOrganizer,
   eventImageUrl,
+  avatarUrl,
   fetchSavedIds,
   saveEvent,
   unsaveEvent,
+  cancelEvent,
 } from '../../lib/api'
 
 export default function EventDetail() {
@@ -37,6 +40,8 @@ export default function EventDetail() {
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
   const [promptOpen, setPromptOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const isOwner = !auth.isGuest && auth.user?.id === event?.organizer_id
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -57,7 +62,7 @@ export default function EventDetail() {
     }
   }, [id, auth.isGuest])
 
-  useEffect(() => { load() }, [load])
+  useFocusEffect(useCallback(() => { load() }, [load]))
 
   const onSave = async () => {
     if (auth.isGuest) {
@@ -75,6 +80,30 @@ export default function EventDetail() {
     } catch (e) {
       console.log('save error', e)
     }
+  }
+
+  const onDelete = () => {
+    Alert.alert(
+      'Cancel this event?',
+      'Everyone who saved it will be notified. This can\'t be undone.',
+      [
+        { text: 'Never mind', style: 'cancel' },
+        {
+          text: 'Cancel event',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true)
+            try {
+              await cancelEvent(id, `${event.title} was cancelled by the organiser.`)
+              router.back()
+            } catch (e) {
+              Alert.alert('Could not cancel event', e.message ?? 'Please try again.')
+              setDeleting(false)
+            }
+          },
+        },
+      ],
+    )
   }
 
   if (loading) {
@@ -113,9 +142,26 @@ export default function EventDetail() {
             <TouchableOpacity style={styles.circleBtn} onPress={() => router.back()}>
               <Ionicons name="chevron-back" size={22} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.circleBtn} onPress={onSave}>
-              <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color="#fff" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: space(2.5) }}>
+              {isOwner ? (
+                <>
+                  <TouchableOpacity style={styles.circleBtn} onPress={() => router.push(`/event/edit/${id}`)}>
+                    <Ionicons name="create-outline" size={19} color="#fff" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.circleBtn} onPress={onDelete} disabled={deleting}>
+                    {deleting ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Ionicons name="trash-outline" size={19} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity style={styles.circleBtn} onPress={onSave}>
+                  <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color="#fff" />
+                </TouchableOpacity>
+              )}
+            </View>
           </SafeAreaView>
         </View>
 
@@ -144,8 +190,12 @@ export default function EventDetail() {
                 activeOpacity={0.8}
                 onPress={() => router.push(`/organizer/${organizer.id}`)}
               >
-                <View style={styles.orgAvatar}>
-                  <Text style={styles.orgInitial}>{organizer.name[0]}</Text>
+                <View style={[styles.orgAvatar, { overflow: 'hidden' }]}>
+                  {organizer.avatar_path ? (
+                    <Image source={{ uri: avatarUrl(organizer.avatar_path) }} style={{ width: '100%', height: '100%' }} />
+                  ) : (
+                    <Text style={styles.orgInitial}>{organizer.name[0]}</Text>
+                  )}
                 </View>
                 <Text style={styles.orgName}>{organizer.name}</Text>
                 <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />

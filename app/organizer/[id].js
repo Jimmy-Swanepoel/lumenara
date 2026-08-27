@@ -23,6 +23,7 @@ import {
   fetchOrganizer,
   fetchEventsByOrganizer,
   fetchFollowingIds,
+  fetchOrganizerStats,
   followOrganizer,
   unfollowOrganizer,
   avatarUrl,
@@ -34,11 +35,13 @@ export default function OrganizerProfile() {
   const { id } = useLocalSearchParams()
   const router = useRouter()
   const auth = useAuth()
+  const isSelf = !auth.isGuest && auth.user?.id === id
 
   const [organizer, setOrganizer] = useState(null)
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [following, setFollowing] = useState(false)
+  const [followerCount, setFollowerCount] = useState(0)
   const [promptOpen, setPromptOpen] = useState(false)
   const [tab, setTab] = useState('upcoming')
 
@@ -49,7 +52,9 @@ export default function OrganizerProfile() {
       setOrganizer(org)
       const ev = await fetchEventsByOrganizer(id)
       setEvents(ev)
-      if (!auth.isGuest) {
+      const stats = await fetchOrganizerStats(id)
+      setFollowerCount(stats.follower_count ?? 0)
+      if (!auth.isGuest && !isSelf) {
         const ids = await fetchFollowingIds()
         setFollowing(ids.includes(id))
       }
@@ -59,7 +64,7 @@ export default function OrganizerProfile() {
     } finally {
       setLoading(false)
     }
-  }, [id, auth.isGuest])
+  }, [id, auth.isGuest, isSelf])
 
   useEffect(() => { load() }, [load])
 
@@ -68,6 +73,7 @@ export default function OrganizerProfile() {
       setPromptOpen(true)
       return
     }
+    if (isSelf) return
     try {
       if (following) {
         await unfollowOrganizer(id)
@@ -132,16 +138,21 @@ export default function OrganizerProfile() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>{organizer.name}</Text>
+              <Text style={styles.followerCount}>
+                {followerCount} {followerCount === 1 ? 'follower' : 'followers'}
+              </Text>
               {organizer.bio ? <Text style={styles.bio}>{organizer.bio}</Text> : null}
             </View>
           </View>
 
-          <Button
-            title={following ? 'Following' : 'Follow'}
-            variant={following ? 'outline' : 'primary'}
-            onPress={onFollow}
-            style={{ marginTop: space(4) }}
-          />
+          {!isSelf ? (
+            <Button
+              title={following ? 'Following' : 'Follow'}
+              variant={following ? 'outline' : 'primary'}
+              onPress={onFollow}
+              style={{ marginTop: space(4) }}
+            />
+          ) : null}
 
           {socials.length > 0 ? (
             <View style={styles.socials}>
@@ -197,6 +208,7 @@ const makeStyles = (colors, radius, space) => StyleSheet.create({
   avatarImg: { width: '100%', height: '100%' },
   initial: { fontSize: 30, fontWeight: '800', color: colors.primary },
   name: { fontSize: 22, fontWeight: '800', color: colors.text },
+  followerCount: { fontSize: 14, color: colors.textMuted, marginTop: space(0.5) },
   bio: { fontSize: 15, color: colors.textMuted, marginTop: space(1.5), lineHeight: 21 },
   socials: { flexDirection: 'row', gap: space(3), marginTop: space(4) },
   socialBadge: { width: 44, height: 44, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },

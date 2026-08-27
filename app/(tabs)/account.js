@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useRouter, useFocusEffect } from 'expo-router'
 import Button from '../../components/Button'
 import Field from '../../components/Field'
-import BlurSheet from '../../components/BlurSheet'
+import PopModal from '../../components/PopModal'
 import EmptyState from '../../components/EmptyState'
 import EventCard from '../../components/EventCard'
 import * as ImagePicker from 'expo-image-picker'
@@ -14,8 +14,9 @@ import { useTheme } from '../../lib/themeProvider'
 import { isPast } from '../../lib/format'
 import {
   fetchSavedEvents,
-  fetchFollowingIds,
+  fetchMyFollowing,
   fetchEventsByOrganizer,
+  fetchOrganizerStats,
   updateMyOrganizer,
   avatarUrl,
 } from '../../lib/api'
@@ -48,9 +49,6 @@ function GuestAccount() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.guestWrap}>
-        <View style={styles.avatarLg}>
-          <Ionicons name="person-outline" size={44} color={colors.primary} />
-        </View>
         <Text style={styles.welcome}>Welcome to Lumenara</Text>
         <Text style={styles.welcomeSub}>
           Create an account to save events, follow organisers, and get
@@ -67,26 +65,33 @@ function GuestAccount() {
 
 function UserAccount() {
   const auth = useAuth()
+  const router = useRouter()
   const { colors, radius, space, shadow } = useTheme()
   const styles = makeStyles(colors, radius, space, shadow)
   const [editOpen, setEditOpen] = useState(false)
   const [draftName, setDraftName] = useState(auth.profile?.display_name ?? '')
   const [saved, setSaved] = useState([])
-  const [followCount, setFollowCount] = useState(0)
+  const [following, setFollowing] = useState([])
+  const [followingOpen, setFollowingOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [s, f] = await Promise.all([fetchSavedEvents(), fetchFollowingIds()])
+      const [s, f] = await Promise.all([fetchSavedEvents(), fetchMyFollowing()])
       setSaved(s)
-      setFollowCount(f.length)
+      setFollowing(f)
     } catch (e) {
       console.log('user account load error', e)
     } finally {
       setLoading(false)
     }
   }, [])
+
+  const goToOrganizer = (organizerId) => {
+    setFollowingOpen(false)
+    router.push(`/organizer/${organizerId}`)
+  }
 
   useFocusEffect(useCallback(() => { load() }, [load]))
 
@@ -100,9 +105,6 @@ function UserAccount() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
-          <View style={styles.avatarSm}>
-            <Ionicons name="person-outline" size={28} color={colors.primary} />
-          </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{auth.profile?.display_name ?? 'User'}</Text>
             <Text style={styles.role}>User Account</Text>
@@ -113,10 +115,17 @@ function UserAccount() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.statsRow}>
-          <Text style={styles.statNum}>{followCount}</Text>
-          <Text style={styles.statLabel}>Following</Text>
-        </View>
+        <TouchableOpacity
+          style={[styles.statsRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+          onPress={() => setFollowingOpen(true)}
+          activeOpacity={0.6}
+        >
+          <View>
+            <Text style={styles.statNum}>{following.length}</Text>
+            <Text style={styles.statLabel}>Following</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Saved Events</Text>
         <View style={{ paddingHorizontal: space(4) }}>
@@ -132,10 +141,30 @@ function UserAccount() {
         <View style={{ height: space(8) }} />
       </ScrollView>
 
-      <BlurSheet visible={editOpen} onClose={() => setEditOpen(false)} title="Edit Profile">
+      <PopModal visible={editOpen} onClose={() => setEditOpen(false)} title="Edit Profile">
         <Field label="Username" value={draftName} onChangeText={setDraftName} />
         <Button title="Save Changes" onPress={saveName} />
-      </BlurSheet>
+      </PopModal>
+
+      <PopModal visible={followingOpen} onClose={() => setFollowingOpen(false)} title="Following">
+        {following.length === 0 ? (
+          <EmptyState title="Not following anyone yet" subtitle="Follow organisers to see their events here" />
+        ) : (
+          following.map((org) => (
+            <TouchableOpacity key={org.id} style={styles.followRow} onPress={() => goToOrganizer(org.id)}>
+              <View style={[styles.avatarSm, { overflow: 'hidden' }]}>
+                {org.avatar_path ? (
+                  <Image source={{ uri: avatarUrl(org.avatar_path) }} style={{ width: '100%', height: '100%' }} />
+                ) : (
+                  <Text style={styles.initial}>{org.name[0]}</Text>
+                )}
+              </View>
+              <Text style={styles.followName}>{org.name}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          ))
+        )}
+      </PopModal>
     </SafeAreaView>
   )
 }
@@ -147,6 +176,7 @@ function OrganizerAccount() {
   const router = useRouter()
   const [editOpen, setEditOpen] = useState(false)
   const [events, setEvents] = useState([])
+  const [followerCount, setFollowerCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('upcoming')
   const [draft, setDraft] = useState({
@@ -165,8 +195,12 @@ function OrganizerAccount() {
     if (!auth.isApprovedOrganizer) { setLoading(false); return }
     setLoading(true)
     try {
-      const ev = await fetchEventsByOrganizer(auth.user.id)
+      const [ev, stats] = await Promise.all([
+        fetchEventsByOrganizer(auth.user.id),
+        fetchOrganizerStats(auth.user.id),
+      ])
       setEvents(ev)
+      setFollowerCount(stats.follower_count ?? 0)
     } catch (e) {
       console.log('organizer load error', e)
     } finally {
@@ -223,8 +257,12 @@ function OrganizerAccount() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
-          <View style={[styles.avatarSm, { backgroundColor: colors.accentLight }]}>
-            <Ionicons name="megaphone-outline" size={26} color={colors.accent} />
+          <View style={[styles.avatarSm, { backgroundColor: colors.accentLight, overflow: 'hidden' }]}>
+            {auth.organizer?.avatar_path ? (
+              <Image source={{ uri: avatarUrl(auth.organizer.avatar_path) }} style={{ width: '100%', height: '100%' }} />
+            ) : (
+              <Ionicons name="megaphone-outline" size={26} color={colors.accent} />
+            )}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{auth.organizer?.name ?? 'Organiser'}</Text>
@@ -235,6 +273,13 @@ function OrganizerAccount() {
             <Text style={styles.editText}>Edit</Text>
           </TouchableOpacity>
         </View>
+
+        {auth.isApprovedOrganizer ? (
+          <View style={styles.statsRow}>
+            <Text style={styles.statNum}>{followerCount}</Text>
+            <Text style={styles.statLabel}>Followers</Text>
+          </View>
+        ) : null}
 
         {auth.isPending ? (
           <View style={styles.pendingBanner}>
@@ -281,7 +326,7 @@ function OrganizerAccount() {
         <View style={{ height: space(8) }} />
       </ScrollView>
 
-      <BlurSheet visible={editOpen} onClose={() => setEditOpen(false)} title="Edit Profile">
+      <PopModal visible={editOpen} onClose={() => setEditOpen(false)} title="Edit Profile">
         <View style={styles.photoWrap}>
           <View style={[styles.avatarLg, { backgroundColor: colors.accentLight, overflow: 'hidden' }]}>
             {pickedAvatar || draft.avatar_path ? (
@@ -307,7 +352,7 @@ function OrganizerAccount() {
         <SocialRow icon="logo-twitter" color="#111827" placeholder="https://x.com/yourname" value={draft.x_url} onChangeText={(v) => setDraft({ ...draft, x_url: v })} />
         <SocialRow icon="logo-tiktok" color="#111827" placeholder="https://tiktok.com/@yourname" value={draft.tiktok_url} onChangeText={(v) => setDraft({ ...draft, tiktok_url: v })} />
         <Button title="Save Changes" style={{ marginTop: space(4) }} onPress={saveProfile} />
-      </BlurSheet>
+      </PopModal>
     </SafeAreaView>
   )
 }
@@ -382,4 +427,7 @@ const makeStyles = (colors, radius, space, shadow) => StyleSheet.create({
   socialRow: { flexDirection: 'row', alignItems: 'center', gap: space(3), marginBottom: space(3) },
   socialBadge: { width: 44, height: 44, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   socialBadgeText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  followRow: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(2.5) },
+  followName: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
+  initial: { fontSize: 18, fontWeight: '800', color: colors.primary },
 })
