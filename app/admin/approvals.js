@@ -18,14 +18,17 @@ export default function Approvals() {
 
   const [queue, setQueue] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       const rows = await fetchPendingOrganizers()
       setQueue(rows)
     } catch (e) {
       console.log('approvals load error', e)
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -89,6 +92,10 @@ export default function Approvals() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: space(4) }}>
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: space(8) }} />
+        ) : loadError ? (
+          <EmptyState icon="cloud-offline-outline" title="Couldn't load applications" subtitle="Check your connection and try again">
+            <Button title="Try again" variant="outline" onPress={load} />
+          </EmptyState>
         ) : queue.length === 0 ? (
           <EmptyState icon="checkmark-done-outline" title="Nothing to review" subtitle="New organiser applications will appear here" />
         ) : (

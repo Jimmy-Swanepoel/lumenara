@@ -9,7 +9,7 @@ import CalendarPicker from './CalendarPicker'
 import TimePicker from './TimePicker'
 import { EVENT_CATEGORIES, categoryLabel } from '../lib/theme'
 import { useTheme } from '../lib/themeProvider'
-import { toISO } from '../lib/format'
+import { toISO, toDateKey } from '../lib/format'
 
 export const EMPTY_EVENT_FORM = {
   title: '', venue: '', startDate: '', startTime: '',
@@ -189,14 +189,14 @@ export default function EventForm({ initial, initialImageUrl = null, submitLabel
         onClose={() => setDatePicker(null)}
         selected={form.startDate}
         onSelect={onPickStartDate}
-        minDate={new Date().toISOString().slice(0, 10)}
+        minDate={toDateKey(new Date().toISOString())}
       />
       <CalendarPicker
         visible={datePicker === 'end'}
         onClose={() => setDatePicker(null)}
         selected={form.endDate}
         onSelect={onPickEndDate}
-        minDate={form.startDate || new Date().toISOString().slice(0, 10)}
+        minDate={form.startDate || toDateKey(new Date().toISOString())}
       />
       <TimePicker
         visible={timePicker === 'start'}

@@ -18,7 +18,7 @@ import EmptyState from '../../components/EmptyState'
 import PopModal from '../../components/PopModal'
 import Button from '../../components/Button'
 import { useTheme } from '../../lib/themeProvider'
-import { formatLongDate } from '../../lib/format'
+import { formatLongDate, toDateKey } from '../../lib/format'
 import { fetchUpcomingEvents, fetchFeaturedEvents } from '../../lib/api'
 
 export default function Home() {
@@ -32,9 +32,11 @@ export default function Home() {
   const [events, setEvents] = useState([])
   const [featured, setFeatured] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       const [ev, feat] = await Promise.all([
         fetchUpcomingEvents(),
@@ -44,6 +46,7 @@ export default function Home() {
       setFeatured(feat)
     } catch (e) {
       console.log('home load error', e)
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -60,8 +63,7 @@ export default function Home() {
       if (!inTitle && !inOrg) return false
     }
     if (dateFilter) {
-      const eventDay = new Date(e.starts_at).toISOString().slice(0, 10)
-      if (eventDay !== dateFilter) return false
+      if (toDateKey(e.starts_at) !== dateFilter) return false
     }
     return true
   })
@@ -118,6 +120,14 @@ export default function Home() {
         <View style={styles.list}>
           {loading ? (
             <ActivityIndicator color={colors.primary} style={{ marginTop: space(8) }} />
+          ) : loadError ? (
+            <EmptyState
+              icon="cloud-offline-outline"
+              title="Couldn't load events"
+              subtitle="Check your connection and try again"
+            >
+              <Button title="Try again" variant="outline" onPress={load} />
+            </EmptyState>
           ) : filtered.length === 0 ? (
             <EmptyState
               icon="calendar-outline"
@@ -171,7 +181,7 @@ function CalendarSheet({ visible, onClose, selected, onSelect }) {
   ]
   while (cells.length < 42) cells.push(null)
 
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayStr = toDateKey(new Date().toISOString())
   const iso = (day) =>
     `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 

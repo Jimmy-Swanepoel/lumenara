@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 import PopModal from './PopModal'
 import Button from './Button'
 import { useTheme } from '../lib/themeProvider'
+import { toDateKey } from '../lib/format'
 
 // Reusable month calendar in a pop modal. Same look as the Home
 // date filter. Used by the create-event date fields.
@@ -27,7 +28,7 @@ export default function CalendarPicker({ visible, onClose, selected, onSelect, m
   ]
   while (cells.length < 42) cells.push(null)
 
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayStr = toDateKey(new Date().toISOString())
   const iso = (day) =>
     `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
