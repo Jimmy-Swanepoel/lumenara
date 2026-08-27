@@ -13,7 +13,7 @@ begin
   if v_event.id is null then
     raise exception 'event not found';
   end if;
-  if v_event.organizer_id <> auth.uid() then
+  if auth.uid() is null or v_event.organizer_id <> auth.uid() then
     raise exception 'not your event';
   end if;
 
@@ -43,6 +43,12 @@ begin
 end;
 $$;
 
+-- Postgres grants EXECUTE to PUBLIC by default on function creation, which
+-- silently includes the anon role - revoke both explicitly (anon carries its
+-- own ACL entry from Supabase's default privileges, separate from PUBLIC) so
+-- only signed-in users can call this.
+revoke execute on function update_event_and_notify(uuid, jsonb, text) from public;
+revoke execute on function update_event_and_notify(uuid, jsonb, text) from anon;
 grant execute on function update_event_and_notify to authenticated;
 
 create or replace function cancel_event(p_event_id uuid, p_message text)
@@ -58,7 +64,7 @@ begin
   if v_event.id is null then
     raise exception 'event not found';
   end if;
-  if v_event.organizer_id <> auth.uid() then
+  if auth.uid() is null or v_event.organizer_id <> auth.uid() then
     raise exception 'not your event';
   end if;
 
@@ -74,4 +80,6 @@ begin
 end;
 $$;
 
+revoke execute on function cancel_event(uuid, text) from public;
+revoke execute on function cancel_event(uuid, text) from anon;
 grant execute on function cancel_event to authenticated;
