@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -32,10 +33,10 @@ export default function Home() {
   const [events, setEvents] = useState([])
   const [featured, setFeatured] = useState([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [loadError, setLoadError] = useState(false)
 
   const load = useCallback(async () => {
-    setLoading(true)
     setLoadError(false)
     try {
       const [ev, feat] = await Promise.all([
@@ -47,12 +48,21 @@ export default function Home() {
     } catch (e) {
       console.log('home load error', e)
       setLoadError(true)
-    } finally {
-      setLoading(false)
     }
   }, [])
 
-  useFocusEffect(useCallback(() => { load() }, [load]))
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true)
+      load().finally(() => setLoading(false))
+    }, [load])
+  )
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await load()
+    setRefreshing(false)
+  }, [load])
 
   const filtered = events.filter((e) => {
     if (category !== 'all' && e.category !== category) return false
@@ -73,7 +83,17 @@ export default function Home() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
         <View style={styles.header}>
           <Text style={styles.brand}>Lumenara</Text>
           <Text style={styles.tagline}>Stellenbosch Events</Text>
