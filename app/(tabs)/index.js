@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   View,
   Text,
   TextInput,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
@@ -20,12 +20,13 @@ import PopModal from '../../components/PopModal'
 import Button from '../../components/Button'
 import { useTheme } from '../../lib/themeProvider'
 import { formatLongDate, toDateKey } from '../../lib/format'
-import { fetchUpcomingEvents, fetchFeaturedEvents } from '../../lib/api'
+import { fetchUpcomingEvents, fetchFeaturedEvents, EVENTS_PAGE_SIZE } from '../../lib/api'
 
 export default function Home() {
   const { colors, radius, space } = useTheme()
   const styles = makeStyles(colors, radius, space)
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [category, setCategory] = useState('all')
   const [dateFilter, setDateFilter] = useState(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -33,23 +34,31 @@ export default function Home() {
   const [events, setEvents] = useState([])
   const [featured, setFeatured] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 300)
+    return () => clearTimeout(t)
+  }, [query])
 
   const load = useCallback(async () => {
     setLoadError(false)
     try {
       const [ev, feat] = await Promise.all([
-        fetchUpcomingEvents(),
+        fetchUpcomingEvents({ category, query: debouncedQuery, dateKey: dateFilter, from: 0 }),
         fetchFeaturedEvents(),
       ])
       setEvents(ev)
       setFeatured(feat)
+      setHasMore(ev.length === EVENTS_PAGE_SIZE)
     } catch (e) {
       console.log('home load error', e)
       setLoadError(true)
     }
-  }, [])
+  }, [category, debouncedQuery, dateFilter])
 
   useFocusEffect(
     useCallback(() => {
@@ -64,26 +73,85 @@ export default function Home() {
     setRefreshing(false)
   }, [load])
 
-  const filtered = events.filter((e) => {
-    if (category !== 'all' && e.category !== category) return false
-    if (query.trim()) {
-      const q = query.trim().toLowerCase()
-      const inTitle = e.title?.toLowerCase().includes(q)
-      const inOrg = e.organizer_name?.toLowerCase().includes(q)
-      if (!inTitle && !inOrg) return false
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || loading || refreshing || loadError) return
+    setLoadingMore(true)
+    try {
+      const next = await fetchUpcomingEvents({
+        category,
+        query: debouncedQuery,
+        dateKey: dateFilter,
+        from: events.length,
+      })
+      setEvents((prev) => [...prev, ...next])
+      setHasMore(next.length === EVENTS_PAGE_SIZE)
+    } catch (e) {
+      console.log('home load more error', e)
+    } finally {
+      setLoadingMore(false)
     }
-    if (dateFilter) {
-      if (toDateKey(e.starts_at) !== dateFilter) return false
-    }
-    return true
-  })
+  }, [loadingMore, hasMore, loading, refreshing, loadError, category, debouncedQuery, dateFilter, events.length])
 
-  const showCarousel =
-    category === 'all' && !query && !dateFilter && featured.length > 0
+  const filtersActive = category !== 'all' || !!debouncedQuery || !!dateFilter
+  const showCarousel = category === 'all' && !query && !dateFilter && featured.length > 0
+
+  const listHeader = (
+    <>
+      <View style={styles.header}>
+        <Text style={styles.brand}>Lumenara</Text>
+        <Text style={styles.tagline}>Stellenbosch Events</Text>
+      </View>
+
+      <View style={styles.searchRow}>
+        <Ionicons name="search" size={20} color={colors.textMuted} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search events..."
+          placeholderTextColor={colors.textMuted}
+          value={query}
+          onChangeText={setQuery}
+        />
+        <TouchableOpacity onPress={() => setCalendarOpen(true)}>
+          <Ionicons
+            name="calendar-outline"
+            size={20}
+            color={dateFilter ? colors.primary : colors.textMuted}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {dateFilter ? (
+        <TouchableOpacity style={styles.activeFilter} onPress={() => setDateFilter(null)}>
+          <Text style={styles.activeFilterText}>{formatLongDate(dateFilter)}</Text>
+          <Ionicons name="close-circle" size={16} color={colors.primary} />
+        </TouchableOpacity>
+      ) : null}
+
+      <View style={styles.chipsWrap}>
+        <CategoryChips selected={category} onSelect={setCategory} />
+      </View>
+
+      {showCarousel ? <FeaturedCarousel events={featured} /> : null}
+
+      <View style={styles.listHeader}>
+        <Text style={styles.sectionTitle}>Upcoming Events</Text>
+        <Text style={styles.count}>
+          {events.length}{hasMore ? '+' : ''} event{events.length === 1 && !hasMore ? '' : 's'}
+        </Text>
+      </View>
+    </>
+  )
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView
+      <FlatList
+        data={loading || loadError ? [] : events}
+        keyExtractor={(e) => e.id}
+        renderItem={({ item }) => (
+          <View style={styles.list}>
+            <EventCard event={item} />
+          </View>
+        )}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -93,52 +161,18 @@ export default function Home() {
             colors={[colors.primary]}
           />
         }
-      >
-        <View style={styles.header}>
-          <Text style={styles.brand}>Lumenara</Text>
-          <Text style={styles.tagline}>Stellenbosch Events</Text>
-        </View>
-
-        <View style={styles.searchRow}>
-          <Ionicons name="search" size={20} color={colors.textMuted} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search events..."
-            placeholderTextColor={colors.textMuted}
-            value={query}
-            onChangeText={setQuery}
-          />
-          <TouchableOpacity onPress={() => setCalendarOpen(true)}>
-            <Ionicons
-              name="calendar-outline"
-              size={20}
-              color={dateFilter ? colors.primary : colors.textMuted}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {dateFilter ? (
-          <TouchableOpacity style={styles.activeFilter} onPress={() => setDateFilter(null)}>
-            <Text style={styles.activeFilterText}>{formatLongDate(dateFilter)}</Text>
-            <Ionicons name="close-circle" size={16} color={colors.primary} />
-          </TouchableOpacity>
-        ) : null}
-
-        <View style={styles.chipsWrap}>
-          <CategoryChips selected={category} onSelect={setCategory} />
-        </View>
-
-        {showCarousel ? <FeaturedCarousel events={featured} /> : null}
-
-        <View style={styles.listHeader}>
-          <Text style={styles.sectionTitle}>Upcoming Events</Text>
-          <Text style={styles.count}>
-            {filtered.length} event{filtered.length === 1 ? '' : 's'}
-          </Text>
-        </View>
-
-        <View style={styles.list}>
-          {loading ? (
+        ListHeaderComponent={listHeader}
+        onEndReachedThreshold={0.4}
+        onEndReached={loadMore}
+        ListFooterComponent={
+          loadingMore ? (
+            <ActivityIndicator color={colors.primary} style={{ marginVertical: space(6) }} />
+          ) : (
+            <View style={{ height: space(8) }} />
+          )
+        }
+        ListEmptyComponent={
+          loading ? (
             <ActivityIndicator color={colors.primary} style={{ marginTop: space(8) }} />
           ) : loadError ? (
             <EmptyState
@@ -148,23 +182,19 @@ export default function Home() {
             >
               <Button title="Try again" variant="outline" onPress={load} />
             </EmptyState>
-          ) : filtered.length === 0 ? (
+          ) : (
             <EmptyState
               icon="calendar-outline"
               title="No events found"
               subtitle={
-                events.length === 0
-                  ? 'No events have been posted yet'
-                  : 'Try a different category or clear your filters'
+                filtersActive
+                  ? 'Try a different category or clear your filters'
+                  : 'No events have been posted yet'
               }
             />
-          ) : (
-            filtered.map((e) => <EventCard key={e.id} event={e} />)
-          )}
-        </View>
-
-        <View style={{ height: space(8) }} />
-      </ScrollView>
+          )
+        }
+      />
 
       <CalendarSheet
         visible={calendarOpen}
