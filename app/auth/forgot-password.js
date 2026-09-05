@@ -3,32 +3,35 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
+import * as Linking from 'expo-linking'
 import Field from '../../components/Field'
 import Button from '../../components/Button'
-import { useAuth } from '../../lib/auth'
+import { supabase } from '../../lib/supabase'
 import { useTheme } from '../../lib/themeProvider'
 
-export default function Login() {
+export default function ForgotPassword() {
   const router = useRouter()
-  const auth = useAuth()
   const { colors, radius, space, shadow } = useTheme()
   const styles = makeStyles(colors, radius, space, shadow)
 
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
+  const [sent, setSent] = useState(false)
 
   const submit = async () => {
-    if (!email.trim() || !password) {
-      Alert.alert('Missing details', 'Please enter your email and password.')
+    if (!email.trim()) {
+      Alert.alert('Missing email', 'Please enter your account email.')
       return
     }
     setBusy(true)
     try {
-      await auth.signIn({ email: email.trim(), password })
-      router.replace('/(tabs)/account')
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: Linking.createURL('auth/reset-password'),
+      })
+      if (error) throw error
+      setSent(true)
     } catch (e) {
-      Alert.alert('Login failed', e.message ?? 'Please check your details and try again.')
+      Alert.alert('Could not send reset email', e.message ?? 'Please try again.')
     } finally {
       setBusy(false)
     }
@@ -42,22 +45,38 @@ export default function Login() {
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
-        <Text style={styles.h1}>Log in</Text>
+        <Text style={styles.h1}>Reset password</Text>
 
         <View style={styles.card}>
-          <Field label="Email" value={email} onChangeText={setEmail} placeholder="you@example.com" keyboardType="email-address" />
-          <Field label="Password" value={password} onChangeText={setPassword} placeholder="Your password" secureTextEntry />
-          <TouchableOpacity style={styles.forgot} onPress={() => router.push('/auth/forgot-password')}>
-            <Text style={styles.link}>Forgot password?</Text>
-          </TouchableOpacity>
-          <Button title="Log In" onPress={submit} loading={busy} />
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => router.replace('/auth/role-select')}>
-            <Text style={styles.link}>Sign up</Text>
-          </TouchableOpacity>
+          {sent ? (
+            <>
+              <Text style={styles.body}>
+                If an account exists for {email.trim()}, we've sent a link to reset your
+                password. Check your inbox (and spam folder).
+              </Text>
+              <Button
+                title="Back to Log In"
+                variant="outline"
+                onPress={() => router.replace('/auth/login')}
+                style={{ marginTop: space(4) }}
+              />
+            </>
+          ) : (
+            <>
+              <Text style={[styles.body, { marginBottom: space(4) }]}>
+                Enter the email you signed up with and we'll send you a link to reset your
+                password.
+              </Text>
+              <Field
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                keyboardType="email-address"
+              />
+              <Button title="Send Reset Link" onPress={submit} loading={busy} />
+            </>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -70,8 +89,5 @@ const makeStyles = (colors, radius, space, shadow) => StyleSheet.create({
   backText: { fontSize: 17, color: colors.text },
   h1: { fontSize: 27, fontWeight: '800', color: colors.text, paddingHorizontal: space(6), marginTop: space(5), marginBottom: space(5) },
   card: { backgroundColor: colors.card, marginHorizontal: space(4), borderRadius: radius.lg, padding: space(5), ...shadow },
-  forgot: { alignSelf: 'flex-end', marginBottom: space(4) },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: space(5) },
-  footerText: { fontSize: 15, color: colors.textMuted },
-  link: { fontSize: 15, color: colors.primary, fontWeight: '700' },
+  body: { fontSize: 15, color: colors.textMuted, lineHeight: 21 },
 })
