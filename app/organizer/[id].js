@@ -54,7 +54,7 @@ export default function OrganizerProfile() {
       setEvents(ev)
       const stats = await fetchOrganizerStats(id)
       setFollowerCount(stats.follower_count ?? 0)
-      if (!auth.isGuest && !isSelf) {
+      if (!auth.isGuest && !isSelf && !auth.isOrganizer) {
         const ids = await fetchFollowingIds()
         setFollowing(ids.includes(id))
       }
@@ -64,7 +64,7 @@ export default function OrganizerProfile() {
     } finally {
       setLoading(false)
     }
-  }, [id, auth.isGuest, isSelf])
+  }, [id, auth.isGuest, isSelf, auth.isOrganizer])
 
   useEffect(() => { load() }, [load])
 
@@ -73,7 +73,7 @@ export default function OrganizerProfile() {
       setPromptOpen(true)
       return
     }
-    if (isSelf) return
+    if (isSelf || auth.isOrganizer) return
     try {
       if (following) {
         await unfollowOrganizer(id)
@@ -145,7 +145,7 @@ export default function OrganizerProfile() {
             </View>
           </View>
 
-          {!isSelf ? (
+          {!isSelf && !auth.isOrganizer ? (
             <Button
               title={following ? 'Following' : 'Follow'}
               variant={following ? 'outline' : 'primary'}
