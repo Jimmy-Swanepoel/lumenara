@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { useRouter, useNavigation } from 'expo-router'
+import { useRouter } from 'expo-router'
+import SwipeTabWrapper from '../../components/SwipeTabWrapper'
 import EventForm, { EMPTY_EVENT_FORM } from '../../components/EventForm'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../lib/themeProvider'
@@ -12,22 +13,23 @@ import { supabase } from '../../lib/supabase'
 export default function CreateEvent() {
   const auth = useAuth()
   const router = useRouter()
-  const navigation = useNavigation()
   const { colors, space } = useTheme()
   const styles = makeStyles(colors, space)
 
-  const [formKey, setFormKey] = useState(0)
   const [busy, setBusy] = useState(false)
 
-  // Reset the form each time the Create tab is focused. Using the
-  // navigation focus listener works even when the tab stays mounted.
-  // Remounting EventForm (via key) is the simplest way to reset its state.
-  useEffect(() => {
-    const unsub = navigation.addListener('focus', () => {
-      setFormKey((k) => k + 1)
-    })
-    return unsub
-  }, [navigation])
+  if (!auth.isOrganizer) {
+    return (
+      <SwipeTabWrapper name="create">
+        <SafeAreaView style={styles.safe} edges={['top']}>
+          <View style={styles.blocked}>
+            <Ionicons name="lock-closed-outline" size={40} color={colors.textMuted} />
+            <Text style={styles.blockedTitle}>Organisers only</Text>
+          </View>
+        </SafeAreaView>
+      </SwipeTabWrapper>
+    )
+  }
 
   const uploadImage = async (uid, imageUri) => {
     if (!imageUri) return null
@@ -43,16 +45,18 @@ export default function CreateEvent() {
 
   if (auth.isPending) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.blocked}>
-          <Ionicons name="time-outline" size={44} color={colors.accent} />
-          <Text style={styles.blockedTitle}>Account under review</Text>
-          <Text style={styles.blockedBody}>
-            You'll be able to create events once an admin approves your
-            organiser account.
-          </Text>
-        </View>
-      </SafeAreaView>
+      <SwipeTabWrapper name="create">
+        <SafeAreaView style={styles.safe} edges={['top']}>
+          <View style={styles.blocked}>
+            <Ionicons name="time-outline" size={44} color={colors.accent} />
+            <Text style={styles.blockedTitle}>Account under review</Text>
+            <Text style={styles.blockedBody}>
+              You'll be able to create events once an admin approves your
+              organiser account.
+            </Text>
+          </View>
+        </SafeAreaView>
+      </SwipeTabWrapper>
     )
   }
 
@@ -71,24 +75,26 @@ export default function CreateEvent() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <Text style={styles.h1}>Create Event</Text>
-          <Text style={styles.sub}>Fill in the details for your event listing</Text>
-        </View>
+    <SwipeTabWrapper name="create">
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <View style={styles.header}>
+            <Text style={styles.h1}>Create Event</Text>
+            <Text style={styles.sub}>Fill in the details for your event listing</Text>
+          </View>
 
-        <EventForm key={formKey} initial={EMPTY_EVENT_FORM} submitLabel="Create Event" busy={busy} onSubmit={submit} />
+          <EventForm initial={EMPTY_EVENT_FORM} submitLabel="Create Event" busy={busy} onSubmit={submit} />
 
-        <View style={{ height: space(10) }} />
-      </ScrollView>
-    </SafeAreaView>
+          <View style={{ height: space(10) }} />
+        </ScrollView>
+      </SafeAreaView>
+    </SwipeTabWrapper>
   )
 }
 
 const makeStyles = (colors, space) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  header: { backgroundColor: colors.card, paddingHorizontal: space(6), paddingTop: space(4), paddingBottom: space(5) },
+  header: { backgroundColor: colors.card, paddingHorizontal: space(6), paddingTop: space(3), paddingBottom: space(5) },
   h1: { fontSize: 27, fontWeight: '800', color: colors.text },
   sub: { fontSize: 15, color: colors.textMuted, marginTop: space(1) },
   blocked: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space(8) },

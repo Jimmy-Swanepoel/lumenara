@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter, useFocusEffect } from 'expo-router'
+import SwipeTabWrapper from '../../components/SwipeTabWrapper'
 import Button from '../../components/Button'
 import Field from '../../components/Field'
 import PopModal from '../../components/PopModal'
@@ -36,9 +37,11 @@ function Loading() {
   const { colors, radius, space, shadow } = useTheme()
   const styles = makeStyles(colors, radius, space, shadow)
   return (
-    <SafeAreaView style={[styles.safe, { justifyContent: 'center' }]}>
-      <ActivityIndicator size="large" color={colors.primary} />
-    </SafeAreaView>
+    <SwipeTabWrapper name="account">
+      <SafeAreaView style={[styles.safe, { justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
+    </SwipeTabWrapper>
   )
 }
 
@@ -47,19 +50,21 @@ function GuestAccount() {
   const { colors, radius, space, shadow } = useTheme()
   const styles = makeStyles(colors, radius, space, shadow)
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.guestWrap}>
-        <Text style={styles.welcome}>Welcome to Lumenara</Text>
-        <Text style={styles.welcomeSub}>
-          Create an account to save events, follow organisers, and get
-          personalised recommendations.
-        </Text>
-        <View style={{ alignSelf: 'stretch', gap: space(3), marginTop: space(6) }}>
-          <Button title="Sign Up" onPress={() => router.push('/auth/role-select')} />
-          <Button title="Log In" variant="outline" onPress={() => router.push('/auth/login')} />
+    <SwipeTabWrapper name="account">
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.guestWrap}>
+          <Text style={styles.welcome}>Welcome to Lumenara</Text>
+          <Text style={styles.welcomeSub}>
+            Create an account to save events, follow organisers, and get
+            personalised recommendations.
+          </Text>
+          <View style={{ alignSelf: 'stretch', gap: space(3), marginTop: space(6) }}>
+            <Button title="Sign Up" onPress={() => router.push('/auth/role-select')} />
+            <Button title="Log In" variant="outline" onPress={() => router.push('/auth/login')} />
+          </View>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </SwipeTabWrapper>
   )
 }
 
@@ -75,8 +80,8 @@ function UserAccount() {
   const [followingOpen, setFollowingOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoading(true)
     try {
       const [s, f] = await Promise.all([fetchSavedEvents(), fetchMyFollowing()])
       setSaved(s)
@@ -84,7 +89,7 @@ function UserAccount() {
     } catch (e) {
       console.log('user account load error', e)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [])
 
@@ -93,7 +98,19 @@ function UserAccount() {
     router.push(`/organizer/${organizerId}`)
   }
 
-  useFocusEffect(useCallback(() => { load() }, [load]))
+  // Only the first focus shows the spinner; later refocuses (swipe/tap back
+  // to this tab) refetch silently so the saved-events list doesn't blank out.
+  const hasLoadedOnce = useRef(false)
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasLoadedOnce.current) {
+        hasLoadedOnce.current = true
+        load()
+      } else {
+        load({ silent: true })
+      }
+    }, [load])
+  )
 
   const saveName = async () => {
     await supabase.from('profiles').update({ display_name: draftName }).eq('id', auth.user.id)
@@ -102,6 +119,7 @@ function UserAccount() {
   }
 
   return (
+    <SwipeTabWrapper name="account">
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
@@ -166,6 +184,7 @@ function UserAccount() {
         )}
       </PopModal>
     </SafeAreaView>
+    </SwipeTabWrapper>
   )
 }
 
@@ -191,9 +210,9 @@ function OrganizerAccount() {
   const [pickedAvatar, setPickedAvatar] = useState(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ silent } = {}) => {
     if (!auth.isApprovedOrganizer) { setLoading(false); return }
-    setLoading(true)
+    if (!silent) setLoading(true)
     try {
       const [ev, stats] = await Promise.all([
         fetchEventsByOrganizer(auth.user.id),
@@ -204,11 +223,23 @@ function OrganizerAccount() {
     } catch (e) {
       console.log('organizer load error', e)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [auth.isApprovedOrganizer, auth.user?.id])
 
-  useFocusEffect(useCallback(() => { load() }, [load]))
+  // Only the first focus shows the spinner; later refocuses (swipe/tap back
+  // to this tab) refetch silently so "Your Events" doesn't blank out.
+  const hasLoadedOnce = useRef(false)
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasLoadedOnce.current) {
+        hasLoadedOnce.current = true
+        load()
+      } else {
+        load({ silent: true })
+      }
+    }, [load])
+  )
 
   const upcoming = events.filter((e) => !isPast(e.ends_at))
   const past = events.filter((e) => isPast(e.ends_at))
@@ -254,6 +285,7 @@ function OrganizerAccount() {
   }
 
   return (
+    <SwipeTabWrapper name="account">
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
@@ -354,6 +386,7 @@ function OrganizerAccount() {
         <Button title="Save Changes" style={{ marginTop: space(4) }} onPress={saveProfile} />
       </PopModal>
     </SafeAreaView>
+    </SwipeTabWrapper>
   )
 }
 
@@ -376,24 +409,26 @@ function AdminAccount() {
   const styles = makeStyles(colors, radius, space, shadow)
   const router = useRouter()
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.profileHeader}>
-          <View style={[styles.avatarSm, { backgroundColor: '#DCFCE7' }]}>
-            <Ionicons name="shield-checkmark-outline" size={26} color={colors.success} />
+    <SwipeTabWrapper name="account">
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.profileHeader}>
+            <View style={[styles.avatarSm, { backgroundColor: '#DCFCE7' }]}>
+              <Ionicons name="shield-checkmark-outline" size={26} color={colors.success} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.name}>Admin</Text>
+              <Text style={styles.role}>Administrator</Text>
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.name}>Admin</Text>
-            <Text style={styles.role}>Administrator</Text>
+          <Text style={styles.sectionTitle}>Tools</Text>
+          <View style={{ paddingHorizontal: space(4), gap: space(3) }}>
+            <Button title="Organiser Approvals" onPress={() => router.push('/admin/approvals')} />
+            <Button title="Sign Out" variant="outline" onPress={auth.signOut} />
           </View>
-        </View>
-        <Text style={styles.sectionTitle}>Tools</Text>
-        <View style={{ paddingHorizontal: space(4), gap: space(3) }}>
-          <Button title="Organiser Approvals" onPress={() => router.push('/admin/approvals')} />
-          <Button title="Sign Out" variant="outline" onPress={auth.signOut} />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </SwipeTabWrapper>
   )
 }
 

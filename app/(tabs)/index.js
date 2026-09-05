@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect } from 'expo-router'
+import SwipeTabWrapper from '../../components/SwipeTabWrapper'
 import FeaturedCarousel from '../../components/FeaturedCarousel'
 import CategoryChips from '../../components/CategoryChips'
 import EventCard from '../../components/EventCard'
@@ -44,8 +45,8 @@ export default function Home() {
     return () => clearTimeout(t)
   }, [query])
 
-  const load = useCallback(async () => {
-    setLoadError(false)
+  const load = useCallback(async ({ silent } = {}) => {
+    if (!silent) setLoadError(false)
     try {
       const [ev, feat] = await Promise.all([
         fetchUpcomingEvents({ category, query: debouncedQuery, dateKey: dateFilter, from: 0 }),
@@ -56,14 +57,26 @@ export default function Home() {
       setHasMore(ev.length === EVENTS_PAGE_SIZE)
     } catch (e) {
       console.log('home load error', e)
-      setLoadError(true)
+      if (!silent) setLoadError(true)
     }
   }, [category, debouncedQuery, dateFilter])
 
+  // Screens stay mounted across tab switches, so useFocusEffect refires on
+  // every swipe/tap back to this tab (and on filter changes, since `load`
+  // changes identity too). Only the very first load should show the blocking
+  // spinner - refetching on every later refocus should happen quietly in the
+  // background so existing cards don't flash away and the layout doesn't jump.
+  const hasLoadedOnce = useRef(false)
+
   useFocusEffect(
     useCallback(() => {
-      setLoading(true)
-      load().finally(() => setLoading(false))
+      if (!hasLoadedOnce.current) {
+        hasLoadedOnce.current = true
+        setLoading(true)
+        load().finally(() => setLoading(false))
+      } else {
+        load({ silent: true })
+      }
     }, [load])
   )
 
@@ -143,69 +156,71 @@ export default function Home() {
   )
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <FlatList
-        data={loading || loadError ? [] : events}
-        keyExtractor={(e) => e.id}
-        renderItem={({ item }) => (
-          <View style={styles.list}>
-            <EventCard event={item} />
-          </View>
-        )}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        ListHeaderComponent={listHeader}
-        onEndReachedThreshold={0.4}
-        onEndReached={loadMore}
-        ListFooterComponent={
-          loadingMore ? (
-            <ActivityIndicator color={colors.primary} style={{ marginVertical: space(6) }} />
-          ) : (
-            <View style={{ height: space(8) }} />
-          )
-        }
-        ListEmptyComponent={
-          loading ? (
-            <ActivityIndicator color={colors.primary} style={{ marginTop: space(8) }} />
-          ) : loadError ? (
-            <EmptyState
-              icon="cloud-offline-outline"
-              title="Couldn't load events"
-              subtitle="Check your connection and try again"
-            >
-              <Button title="Try again" variant="outline" onPress={load} />
-            </EmptyState>
-          ) : (
-            <EmptyState
-              icon="calendar-outline"
-              title="No events found"
-              subtitle={
-                filtersActive
-                  ? 'Try a different category or clear your filters'
-                  : 'No events have been posted yet'
-              }
+    <SwipeTabWrapper name="index">
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <FlatList
+          data={loading || loadError ? [] : events}
+          keyExtractor={(e) => e.id}
+          renderItem={({ item }) => (
+            <View style={styles.list}>
+              <EventCard event={item} />
+            </View>
+          )}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
             />
-          )
-        }
-      />
+          }
+          ListHeaderComponent={listHeader}
+          onEndReachedThreshold={0.4}
+          onEndReached={loadMore}
+          ListFooterComponent={
+            loadingMore ? (
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: space(6) }} />
+            ) : (
+              <View style={{ height: space(8) }} />
+            )
+          }
+          ListEmptyComponent={
+            loading ? (
+              <ActivityIndicator color={colors.primary} style={{ marginTop: space(8) }} />
+            ) : loadError ? (
+              <EmptyState
+                icon="cloud-offline-outline"
+                title="Couldn't load events"
+                subtitle="Check your connection and try again"
+              >
+                <Button title="Try again" variant="outline" onPress={load} />
+              </EmptyState>
+            ) : (
+              <EmptyState
+                icon="calendar-outline"
+                title="No events found"
+                subtitle={
+                  filtersActive
+                    ? 'Try a different category or clear your filters'
+                    : 'No events have been posted yet'
+                }
+              />
+            )
+          }
+        />
 
-      <CalendarSheet
-        visible={calendarOpen}
-        onClose={() => setCalendarOpen(false)}
-        selected={dateFilter}
-        onSelect={(d) => {
-          setDateFilter(d)
-          setCalendarOpen(false)
-        }}
-      />
-    </SafeAreaView>
+        <CalendarSheet
+          visible={calendarOpen}
+          onClose={() => setCalendarOpen(false)}
+          selected={dateFilter}
+          onSelect={(d) => {
+            setDateFilter(d)
+            setCalendarOpen(false)
+          }}
+        />
+      </SafeAreaView>
+    </SwipeTabWrapper>
   )
 }
 

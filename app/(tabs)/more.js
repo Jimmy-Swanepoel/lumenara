@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, LayoutAnimation, 
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
+import SwipeTabWrapper from '../../components/SwipeTabWrapper'
 import Button from '../../components/Button'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../lib/themeProvider'
@@ -25,6 +26,7 @@ export default function More() {
   const s = makeStyles(colors, radius, space, shadow)
 
   return (
+    <SwipeTabWrapper name="more">
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={s.h1}>More</Text>
@@ -107,6 +109,7 @@ export default function More() {
         <View style={{ height: space(10) }} />
       </ScrollView>
     </SafeAreaView>
+    </SwipeTabWrapper>
   )
 }
 
