@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import SwipeTabWrapper from '../../components/SwipeTabWrapper'
 import EventForm, { EMPTY_EVENT_FORM } from '../../components/EventForm'
 import { useAuth } from '../../lib/auth'
@@ -17,6 +17,10 @@ export default function CreateEvent() {
   const styles = makeStyles(colors, space)
 
   const [busy, setBusy] = useState(false)
+
+  // Re-checks organiser status on every focus so an admin's approval (or a
+  // suspension) shows up without the user having to sign out/in.
+  useFocusEffect(useCallback(() => { auth.refresh() }, [auth.refresh]))
 
   if (!auth.isOrganizer) {
     return (

@@ -229,9 +229,12 @@ function OrganizerAccount() {
 
   // Only the first focus shows the spinner; later refocuses (swipe/tap back
   // to this tab) refetch silently so "Your Events" doesn't blank out.
+  // Also re-checks organiser status on every focus (not just at login) so an
+  // admin's approval shows up without the user having to sign out/in.
   const hasLoadedOnce = useRef(false)
   useFocusEffect(
     useCallback(() => {
+      auth.refresh()
       if (!hasLoadedOnce.current) {
         hasLoadedOnce.current = true
         load()
