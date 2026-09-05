@@ -3,7 +3,6 @@ import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter, useFocusEffect } from 'expo-router'
-import SwipeTabWrapper from '../../components/SwipeTabWrapper'
 import EventForm, { EMPTY_EVENT_FORM } from '../../components/EventForm'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../lib/themeProvider'
@@ -24,14 +23,12 @@ export default function CreateEvent() {
 
   if (!auth.isOrganizer) {
     return (
-      <SwipeTabWrapper name="create">
-        <SafeAreaView style={styles.safe} edges={['top']}>
-          <View style={styles.blocked}>
-            <Ionicons name="lock-closed-outline" size={40} color={colors.textMuted} />
-            <Text style={styles.blockedTitle}>Organisers only</Text>
-          </View>
-        </SafeAreaView>
-      </SwipeTabWrapper>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.blocked}>
+          <Ionicons name="lock-closed-outline" size={40} color={colors.textMuted} />
+          <Text style={styles.blockedTitle}>Organisers only</Text>
+        </View>
+      </SafeAreaView>
     )
   }
 
@@ -49,18 +46,16 @@ export default function CreateEvent() {
 
   if (auth.isPending) {
     return (
-      <SwipeTabWrapper name="create">
-        <SafeAreaView style={styles.safe} edges={['top']}>
-          <View style={styles.blocked}>
-            <Ionicons name="time-outline" size={44} color={colors.accent} />
-            <Text style={styles.blockedTitle}>Account under review</Text>
-            <Text style={styles.blockedBody}>
-              You'll be able to create events once an admin approves your
-              organiser account.
-            </Text>
-          </View>
-        </SafeAreaView>
-      </SwipeTabWrapper>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.blocked}>
+          <Ionicons name="time-outline" size={44} color={colors.accent} />
+          <Text style={styles.blockedTitle}>Account under review</Text>
+          <Text style={styles.blockedBody}>
+            You'll be able to create events once an admin approves your
+            organiser account.
+          </Text>
+        </View>
+      </SafeAreaView>
     )
   }
 
@@ -79,20 +74,18 @@ export default function CreateEvent() {
   }
 
   return (
-    <SwipeTabWrapper name="create">
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          <View style={styles.header}>
-            <Text style={styles.h1}>Create Event</Text>
-            <Text style={styles.sub}>Fill in the details for your event listing</Text>
-          </View>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <View style={styles.header}>
+          <Text style={styles.h1}>Create Event</Text>
+          <Text style={styles.sub}>Fill in the details for your event listing</Text>
+        </View>
 
-          <EventForm initial={EMPTY_EVENT_FORM} submitLabel="Create Event" busy={busy} onSubmit={submit} />
+        <EventForm initial={EMPTY_EVENT_FORM} submitLabel="Create Event" busy={busy} onSubmit={submit} />
 
-          <View style={{ height: space(10) }} />
-        </ScrollView>
-      </SafeAreaView>
-    </SwipeTabWrapper>
+        <View style={{ height: space(10) }} />
+      </ScrollView>
+    </SafeAreaView>
   )
 }
 

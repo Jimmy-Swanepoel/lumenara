@@ -1,11 +1,22 @@
 import { useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native'
-import { Tabs } from 'expo-router'
+import { withLayoutContext } from 'expo-router'
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as NavigationBar from 'expo-navigation-bar'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../lib/themeProvider'
+
+// Material top tabs is backed by react-native-pager-view - a real native
+// ViewPager - repositioned to the bottom via tabBarPosition below. Unlike
+// expo-router's default <Tabs> (which just swaps one absolutely-positioned
+// screen for another with no in-between state), this lays every tab out
+// side by side in one continuous strip, so dragging genuinely drags the
+// current screen off and the neighbouring one's real content into view -
+// no separate gesture handler or fake slide-in animation needed.
+const { Navigator } = createMaterialTopTabNavigator()
+const MaterialTopTabs = withLayoutContext(Navigator)
 
 const ICONS = {
   index: 'home-outline',
@@ -15,8 +26,7 @@ const ICONS = {
 }
 
 // Create is a real tab route (gated by href below) so it gets the same
-// persistent bottom tab bar and swipe behaviour as the other tabs - see
-// SwipeTabWrapper for how organisers land on it by swiping past Account.
+// persistent bottom tab bar and swipe behaviour as the other tabs.
 function BottomTabBar({ state, descriptors, navigation }) {
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
@@ -63,15 +73,16 @@ export default function TabsLayout() {
   }, [colors.card, isDark])
 
   return (
-    <Tabs
+    <MaterialTopTabs
       tabBar={(props) => <BottomTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      tabBarPosition="bottom"
+      screenOptions={{ sceneStyle: { backgroundColor: colors.bg }, animationEnabled: false }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Home' }} />
-      <Tabs.Screen name="account" options={{ title: 'Account' }} />
-      <Tabs.Screen name="create" options={{ title: 'Create', href: isOrganizer ? '/create' : null }} />
-      <Tabs.Screen name="more" options={{ title: 'More' }} />
-    </Tabs>
+      <MaterialTopTabs.Screen name="index" options={{ title: 'Home' }} />
+      <MaterialTopTabs.Screen name="account" options={{ title: 'Account' }} />
+      <MaterialTopTabs.Screen name="create" options={{ title: 'Create', href: isOrganizer ? '/create' : null }} />
+      <MaterialTopTabs.Screen name="more" options={{ title: 'More' }} />
+    </MaterialTopTabs>
   )
 }
 

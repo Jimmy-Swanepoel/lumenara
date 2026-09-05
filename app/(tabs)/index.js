@@ -12,7 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect } from 'expo-router'
-import SwipeTabWrapper from '../../components/SwipeTabWrapper'
 import FeaturedCarousel from '../../components/FeaturedCarousel'
 import CategoryChips from '../../components/CategoryChips'
 import EventCard from '../../components/EventCard'
@@ -156,7 +155,6 @@ export default function Home() {
   )
 
   return (
-    <SwipeTabWrapper name="index">
       <SafeAreaView style={styles.safe} edges={['top']}>
         <FlatList
           data={loading || loadError ? [] : events}
@@ -220,7 +218,6 @@ export default function Home() {
           }}
         />
       </SafeAreaView>
-    </SwipeTabWrapper>
   )
 }
 

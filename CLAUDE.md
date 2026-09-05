@@ -78,25 +78,28 @@ Do NOT use `expo-file-system` readAsStringAsync (the base64 API broke). fetch→
   (24h, 5-min steps); pop modals; create-form resets on focus; social brand icons (Ionicons logo-*);
   organiser avatar upload (users have no avatar — that option was removed); admin approvals wired to real API;
   duplicate-email error; end-time-before-start rolls end date to next day (timezone-safe).
+- Forgot-password flow via Supabase Auth + Resend (`app/auth/forgot-password.js`, `reset-password.js`).
+- **Follows block**: follower count on public organiser profile and on the organiser's own account screen
+  (`organizer_stats.follower_count`); Following list via PopModal (`fetchMyFollowing`); organisers are blocked
+  from following **anyone** (not just self) — the Follow button is hidden whenever the viewer is an organiser,
+  a deliberate broadening of the original "block self-follow only" plan. DB-level guard status unverified
+  (no `setup.sql` in the repo to check against).
+- Swipeable bottom tabs reworked from a fake per-screen slide animation (`components/SwipeTabWrapper.js`,
+  now deleted) to a real native pager: `@react-navigation/material-top-tabs` (repositioned to the bottom via
+  `tabBarPosition="bottom"`, wrapped through expo-router's `withLayoutContext`) backed by
+  `react-native-pager-view`. `screenOptions={{ animationEnabled: false }}` makes tab-bar taps / programmatic
+  nav jump straight to the target tab; only a real finger-drag swipe animates.
 
 ## Pending work
-### Follows block (next)
-- Show organiser **follower count** on the public organiser profile (users see it) — use `organizer_stats.follower_count`
-- Show follower **count** on the organiser's own account screen (count only, not who)
-- **Block self-follow**: hide Follow button when viewer == that organiser; add DB guard too
-- **Following list**: user taps "Following" → a **PopModal** (mist/blur bubble) listing organisers they follow,
-  each tappable to that profile. Needs a `fetchMyFollowing` query returning organiser name+avatar.
-- Organiser→organiser follows are **allowed** (only self-follow blocked)
-
-### Notifications block (after follows)
+### Notifications block (next)
 - New `notifications` table (user_id, event_id, message, type[edited|deleted], read, created_at) + RLS
 - Edit-event screen (reuse create form, pre-filled) + delete button with confirm dialog
 - On edit (meaningful changes: date/time/venue) or delete, insert a notification row for every user who saved that event
 - Surface as a bell/notifications screen (in-app, NOT email — email needs Resend)
 
 ### Parked
-- Forgot password + confirm-signup redirect (need custom SMTP / Resend + a domain)
-- Swipe between tabs (conflicts with horizontal scrollers: category chips, carousel)
+- Confirm-signup redirect (Resend/SMTP now appears configured per the forgot-password work above — re-check
+  whether the domain/rate-limit blocker still applies before picking this up)
 - Bucket 5MB size limits / MIME restrictions (pre-launch polish)
 - DB linter warnings (e.g. organizer_stats SECURITY DEFINER — intentional; pre-launch hardening pass)
 - Delete unused mockData.js/mockAuth.js; sweep test data ("Hhg" events, test accounts) before launch
