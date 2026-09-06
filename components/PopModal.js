@@ -76,7 +76,7 @@ export default function PopModal({
       {/* Backdrop: only the area OUTSIDE the card closes on tap. */}
       <View style={styles.root}>
         <TouchableWithoutFeedback onPress={dismissable ? onClose : () => {}}>
-          <BlurView intensity={28} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill}>
+          <BlurView intensity={28} tint={isDark ? 'dark' : 'light'} experimentalBlurMethod="dimezisBlurView" style={StyleSheet.absoluteFill}>
             <View style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.scrim }]} />
           </BlurView>
         </TouchableWithoutFeedback>
