@@ -57,7 +57,9 @@ organisers; organisers create/manage events; admins approve organisers. Timezone
 
 ## Auth / decisions
 - Email + password only (no Google/Apple)
-- Email confirmation ON (built-in Supabase email is capped at **2/hour** on free tier — needs custom SMTP/Resend to lift; parked pending a domain)
+- Email confirmation ON. Custom SMTP via Resend is configured project-wide (Supabase dashboard →
+  Auth → SMTP Settings; sender `noreply@lumenara.co.za`) — the built-in-email 2/hour cap does NOT
+  apply. Confirmed live via the Management API on 2026-09-16.
 - Organisers are reviewed (pending→approved by admin). Events go live immediately (no event review).
 - Duplicate-email signup now errors ("account already exists") via empty-`identities` check in `auth.js`
 - Admin account: swanepoeljimmy7@gmail.com
@@ -136,8 +138,10 @@ Do NOT use `expo-file-system` readAsStringAsync (the base64 API broke). fetch→
 ### Parked
 - Bucket 5MB size limits / MIME restrictions (pre-launch polish)
 - DB linter warnings (e.g. organizer_stats SECURITY DEFINER — intentional; pre-launch hardening pass)
-- Sweep test data ("Hhg" events, test accounts) before launch — needs to be done via SQL in the Supabase
-  dashboard (no service-role key in this repo, only the public anon key, and RLS blocks broad deletes anyway)
+- Sweep test data ("Hhg" events, test accounts) — deliberately deferred (not just parked): keeping it
+  for now since it's real data from building the app, not leftover mock data, and there's an upcoming
+  MVP test with ~10 family members where existing test content is fine to have around. Revisit before
+  an actual public launch.
 - App icon + splash for store builds
 
 ### Optional / not yet requested
