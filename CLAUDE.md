@@ -89,21 +89,36 @@ Do NOT use `expo-file-system` readAsStringAsync (the base64 API broke). fetch→
   `tabBarPosition="bottom"`, wrapped through expo-router's `withLayoutContext`) backed by
   `react-native-pager-view`. `screenOptions={{ animationEnabled: false }}` makes tab-bar taps / programmatic
   nav jump straight to the target tab; only a real finger-drag swipe animates.
+- **Notifications block**: `notifications` table + RLS; edit-event screen (`app/event/edit/[id].js`, reuses
+  `EventForm`) and a cancel/delete flow with confirm dialog on the event detail screen (owner-only); editing
+  or cancelling calls `updateEventAndNotify`/`cancelEvent` RPCs which insert a notification row for every
+  user who saved that event; surfaced via `components/NotificationsGate.js` — an undismissable `PopModal`
+  checked on launch and on foreground-return, wired into `app/_layout.js`. Note: this is a one-shot popup,
+  not a persistent bell icon/notification history screen — once dismissed, notifications aren't reviewable.
+- Fixed jittery/flickering `BlurView` backdrop on Android popups (`PopModal`, `BlurSheet`) by adding
+  `experimentalBlurMethod="dimezisBlurView"` — expo-blur's default Android blur is a jumpy approximation.
+- Deleted unused `lib/mockData.js` and `lib/mockAuth.js` (no remaining references).
+- **Signup no longer requires a manual re-login.** After sign up, both `signUpUser`/`signUpOrganizer`
+  (`lib/auth.js`) pass `emailRedirectTo: Linking.createURL('auth/confirm')`, and the signup screens route to
+  a new `app/auth/confirm.js` ("check your email") screen instead of an Alert. Tapping the confirmation link
+  deep-links back into that screen carrying session tokens (same implicit/PKCE parsing as the reset-password
+  flow — extracted into a shared `parseAuthTokensFromUrl` in `lib/auth.js`), which establishes the session;
+  `AuthProvider` picks it up and the confirm screen auto-redirects to `/(tabs)`. **Needs verifying**: the
+  Supabase dashboard's Auth → URL Configuration → Redirect URLs allow-list must include this new
+  `.../--/auth/confirm` redirect (same allow-list the reset-password flow already needed an entry in) or the
+  confirmation link will bounce to the Site URL instead of back into the app.
 
 ## Pending work
-### Notifications block (next)
-- New `notifications` table (user_id, event_id, message, type[edited|deleted], read, created_at) + RLS
-- Edit-event screen (reuse create form, pre-filled) + delete button with confirm dialog
-- On edit (meaningful changes: date/time/venue) or delete, insert a notification row for every user who saved that event
-- Surface as a bell/notifications screen (in-app, NOT email — email needs Resend)
-
 ### Parked
-- Confirm-signup redirect (Resend/SMTP now appears configured per the forgot-password work above — re-check
-  whether the domain/rate-limit blocker still applies before picking this up)
 - Bucket 5MB size limits / MIME restrictions (pre-launch polish)
 - DB linter warnings (e.g. organizer_stats SECURITY DEFINER — intentional; pre-launch hardening pass)
-- Delete unused mockData.js/mockAuth.js; sweep test data ("Hhg" events, test accounts) before launch
+- Sweep test data ("Hhg" events, test accounts) before launch — needs to be done via SQL in the Supabase
+  dashboard (no service-role key in this repo, only the public anon key, and RLS blocks broad deletes anyway)
 - App icon + splash for store builds
+
+### Optional / not yet requested
+- A real persistent notifications history screen (bell icon + list), if the pop-up-only approach above
+  turns out to be insufficient once there's real usage.
 
 ## Infra notes
 - Version control: git initialised (via EAS). `.env` and `node_modules` are gitignored. `.env` holds

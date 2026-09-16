@@ -31,8 +31,7 @@ export default function SignUpOrganizer() {
     setBusy(true)
     try {
       await auth.signUpOrganizer({ email: email.trim(), password, name: name.trim() })
-      Alert.alert('Account created', 'Your organiser account is under review. You can log in now.')
-      router.replace('/auth/login')
+      router.replace({ pathname: '/auth/confirm', params: { email: email.trim() } })
     } catch (e) {
       Alert.alert('Sign up failed', e.message ?? 'Please try again.')
     } finally {

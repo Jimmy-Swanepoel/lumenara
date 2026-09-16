@@ -31,8 +31,7 @@ export default function SignUpUser() {
     setBusy(true)
     try {
       await auth.signUpUser({ email: email.trim(), password, username: username.trim() })
-      Alert.alert('Account created', 'You can now log in.')
-      router.replace('/auth/login')
+      router.replace({ pathname: '/auth/confirm', params: { email: email.trim() } })
     } catch (e) {
       Alert.alert('Sign up failed', e.message ?? 'Please try again.')
     } finally {

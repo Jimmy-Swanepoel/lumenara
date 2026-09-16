@@ -6,31 +6,8 @@ import * as Linking from 'expo-linking'
 import Field from '../../components/Field'
 import Button from '../../components/Button'
 import { supabase } from '../../lib/supabase'
+import { parseAuthTokensFromUrl } from '../../lib/auth'
 import { useTheme } from '../../lib/themeProvider'
-
-// Supabase's recovery link carries the session either as access_token/
-// refresh_token in the URL fragment (implicit flow) or as a `code` query
-// param (PKCE flow) - handle both since the project's configured flow type
-// isn't something the app controls.
-function parseTokensFromUrl(url) {
-  if (!url) return null
-
-  const hashPart = url.split('#')[1]
-  if (hashPart) {
-    const params = new URLSearchParams(hashPart)
-    const access_token = params.get('access_token')
-    const refresh_token = params.get('refresh_token')
-    if (access_token && refresh_token) return { kind: 'implicit', access_token, refresh_token }
-  }
-
-  const queryPart = url.split('?')[1]?.split('#')[0]
-  if (queryPart) {
-    const code = new URLSearchParams(queryPart).get('code')
-    if (code) return { kind: 'pkce', code }
-  }
-
-  return null
-}
 
 export default function ResetPassword() {
   const router = useRouter()
@@ -47,7 +24,7 @@ export default function ResetPassword() {
   useEffect(() => {
     const establish = async (url) => {
       if (handled.current || !url) return
-      const tokens = parseTokensFromUrl(url)
+      const tokens = parseAuthTokensFromUrl(url)
       if (!tokens) return
       handled.current = true
       try {
