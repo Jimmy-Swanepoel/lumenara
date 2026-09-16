@@ -52,7 +52,11 @@ organisers; organisers create/manage events; admins approve organisers. Timezone
 - `saved_events` (user_id + event_id)
 - `follows` (user_id + organizer_id)
 - `category_placeholders`
-- **Enum `event_category`** (exact keys): sport, arts, music, food_and_drink, academic, nightlife, markets
+- **Enum `event_category`** (exact keys): sport, arts, music, food_and_drink, nightlife, markets, vineyards.
+  `academic` was retired and replaced with `vineyards` on 2026-09-16 (no events used `academic`, so no
+  data needed reassigning) - required dropping/recreating `upcoming_events`, `past_events`, and
+  `featured_events` since Postgres can't drop an enum value in place; see git history for the migration
+  if this needs doing again.
 - Views: `upcoming_events`, `past_events`, `featured_events`, `organizer_stats` (has `follower_count`, `upcoming_count`)
 - Storage buckets (public): `avatars`, `event-images`, `placeholders` — write policies keyed on `{uid}/` folder prefix
 - Full schema in `setup.sql` (project root or outputs) — extensions, tables, RLS, triggers, functions, grants, buckets
