@@ -108,6 +108,29 @@ Do NOT use `expo-file-system` readAsStringAsync (the base64 API broke). fetch→
   build (`com.lumenara.app` custom scheme) and day-to-day Expo Go testing (`exp://` deep links).
   Still to do: a real end-to-end test (tap an actual confirmation email link on the emulator) to
   confirm the round trip works, not just the config.
+- **Create tab is fully absent for non-organisers**, not just hidden. It's conditionally rendered
+  (`{isOrganizer ? <MaterialTopTabs.Screen name="create".../> : null}` in `app/(tabs)/_layout.js`),
+  and `withLayoutContext(Navigator, undefined, true)` now passes `useOnlyUserDefinedScreens: true` —
+  without that, expo-router auto-injects every file under `app/(tabs)/` as an implicit extra screen
+  regardless of whether it's declared, which is why the tab kept reappearing (rightmost) the first
+  time this was attempted. The dead "Organisers only" fallback screen was removed from `create.js`
+  since the route is now genuinely unreachable for users.
+- Event image upload and organiser avatar upload both offer **Take Photo / Choose from Library**
+  (`ImagePicker.launchCameraAsync` alongside the existing library picker); added the
+  `expo-image-picker` config plugin to `app.json` for camera permission strings — only takes effect
+  on the next EAS build, not Expo Go.
+- Home event cards no longer show the description (still shown on the event detail screen) or the
+  📅 emoji next to the date — both were visual clutter feedback.
+- **TimePicker no longer clips the first digit on open.** The wheel used to position itself via an
+  async `ref.scrollTo()` inside `onLayout`, racy against the ScrollView's actual layout timing.
+  Replaced with the `contentOffset` prop, which sets the initial scroll position synchronously.
+- **Create-event form now clears immediately after a successful post**, not just on app cold-start.
+  `app/(tabs)/create.js` bumps a `formKey` state on success and passes it as `<EventForm key={formKey}>`,
+  forcing a remount back to `EMPTY_EVENT_FORM` (previously the form's `useState` just persisted since
+  the tab bar is a persistent pager that doesn't unmount tabs on switch).
+- Repo pushed to GitHub: `github.com/Jimmy-Swanepoel/lumenara` (personal account, public, kept there
+  deliberately rather than the business org — see reasoning in project memory). Auth is via a
+  dedicated SSH key (`~/.ssh/id_ed25519_github`), not HTTPS/token.
 
 ## Pending work
 ### Parked
