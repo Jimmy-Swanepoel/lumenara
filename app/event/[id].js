@@ -13,8 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import SignUpPrompt from '../../components/SignUpPrompt'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useAuth } from '../../lib/auth'
-import { categoryLabel, categoryStyle } from '../../lib/theme'
+import { categoryLabel, categoryStyle, CATEGORY_GRADIENT } from '../../lib/theme'
 import { useTheme } from '../../lib/themeProvider'
 import { formatLongDate, formatTime } from '../../lib/format'
 import {
@@ -132,6 +133,7 @@ export default function EventDetail() {
   }
 
   const cat = categoryStyle(event.category)
+  const gradient = CATEGORY_GRADIENT[event.category] ?? [colors.primary, colors.primary]
   const imgUrl = event.image_path ? eventImageUrl(event.image_path) : null
 
   return (
@@ -171,9 +173,14 @@ export default function EventDetail() {
         </View>
 
         <View style={styles.sheet}>
-          <View style={styles.catBadge}>
+          <LinearGradient
+            colors={gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.catBadge}
+          >
             <Text style={styles.catText}>{categoryLabel(event.category)}</Text>
-          </View>
+          </LinearGradient>
 
           <Text style={styles.title}>{event.title}</Text>
 
@@ -238,8 +245,8 @@ const makeStyles = (colors, radius, space) => StyleSheet.create({
   circleBtn: { width: 42, height: 42, borderRadius: radius.pill, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
   heroEmoji: { fontSize: 76, alignSelf: 'center' },
   sheet: { backgroundColor: colors.card, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, marginTop: -28, paddingHorizontal: space(6), paddingTop: space(6), minHeight: 420 },
-  catBadge: { alignSelf: 'flex-start', backgroundColor: colors.primaryLight, paddingHorizontal: space(3), paddingVertical: space(1.5), borderRadius: radius.sm },
-  catText: { color: colors.primary, fontWeight: '600', fontSize: 13 },
+  catBadge: { alignSelf: 'flex-start', paddingHorizontal: space(3), paddingVertical: space(1.5), borderRadius: radius.sm },
+  catText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   title: { fontSize: 26, fontWeight: '800', color: colors.text, marginTop: space(3), marginBottom: space(4) },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: space(3), marginBottom: space(3) },
   metaText: { fontSize: 16, color: colors.textMuted, flex: 1 },

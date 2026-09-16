@@ -1,4 +1,4 @@
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native'
+import { ScrollView, Text, TouchableOpacity } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from '../lib/themeProvider'
 import { CATEGORIES, CATEGORY_GRADIENT } from '../lib/theme'
@@ -6,6 +6,13 @@ import { CATEGORIES, CATEGORY_GRADIENT } from '../lib/theme'
 // Resting state is an outline (gradient ring, card colour showing through);
 // the active filter fills solid with the same gradient - so selection state
 // reads at a glance without a second visual language on top of colour.
+//
+// Both the ring and the inner fill are always LinearGradient nodes at a
+// fixed size - only their `colors` prop changes between active/inactive.
+// Toggling padding/size (or swapping a View for a LinearGradient) between
+// states made the native gradient view flash black for a frame on Android
+// while it resized/remounted; keeping geometry identical and only changing
+// colour values avoids that entirely.
 const OUTLINE_WIDTH = 2
 
 export default function CategoryChips({ selected, onSelect }) {
@@ -25,18 +32,22 @@ export default function CategoryChips({ selected, onSelect }) {
               colors={gradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={{ borderRadius: radius.pill, padding: active ? 0 : OUTLINE_WIDTH }}
+              style={{ borderRadius: radius.pill, padding: OUTLINE_WIDTH }}
             >
-              <View style={{
-                borderRadius: radius.pill,
-                backgroundColor: active ? 'transparent' : colors.card,
-                paddingHorizontal: active ? space(5) : space(5) - OUTLINE_WIDTH,
-                paddingVertical: active ? space(2.5) : space(2.5) - OUTLINE_WIDTH,
-              }}>
+              <LinearGradient
+                colors={active ? gradient : [colors.card, colors.card]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  borderRadius: radius.pill,
+                  paddingHorizontal: space(5) - OUTLINE_WIDTH,
+                  paddingVertical: space(2.5) - OUTLINE_WIDTH,
+                }}
+              >
                 <Text style={{ fontSize: 15, fontWeight: '600', color: active ? '#fff' : colors.text }}>
                   {c.label}
                 </Text>
-              </View>
+              </LinearGradient>
             </LinearGradient>
           </TouchableOpacity>
         )

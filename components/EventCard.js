@@ -1,7 +1,8 @@
 import { View, Text, TouchableOpacity, Image } from 'react-native'
 import { useRouter } from 'expo-router'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from '../lib/themeProvider'
-import { categoryLabel, categoryStyle } from '../lib/theme'
+import { categoryLabel, categoryStyle, CATEGORY_GRADIENT } from '../lib/theme'
 import { formatCardDateTime } from '../lib/format'
 import { eventImageUrl } from '../lib/api'
 
@@ -9,6 +10,7 @@ export default function EventCard({ event }) {
   const router = useRouter()
   const { colors, radius, space, shadow } = useTheme()
   const cat = categoryStyle(event.category)
+  const gradient = CATEGORY_GRADIENT[event.category] ?? [colors.primary, colors.primary]
   const imgUrl = event.image_path ? eventImageUrl(event.image_path) : null
 
   return (
@@ -23,15 +25,19 @@ export default function EventCard({ event }) {
         ) : (
           <Text style={{ fontSize: 56 }}>{cat.emoji}</Text>
         )}
-        <View style={{
-          position: 'absolute', top: space(3), right: space(3),
-          backgroundColor: 'rgba(255,255,255,0.92)',
-          paddingHorizontal: space(3), paddingVertical: space(1.5), borderRadius: radius.pill,
-        }}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: '#111827' }}>
+        <LinearGradient
+          colors={gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            position: 'absolute', top: space(3), right: space(3),
+            paddingHorizontal: space(3), paddingVertical: space(1.5), borderRadius: radius.pill,
+          }}
+        >
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>
             {categoryLabel(event.category)}
           </Text>
-        </View>
+        </LinearGradient>
       </View>
 
       <View style={{ padding: space(4) }}>
