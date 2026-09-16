@@ -147,9 +147,6 @@ export default function Home() {
 
       <View style={styles.listHeader}>
         <Text style={styles.sectionTitle}>Upcoming Events</Text>
-        <Text style={styles.count}>
-          {events.length}{hasMore ? '+' : ''} event{events.length === 1 && !hasMore ? '' : 's'}
-        </Text>
       </View>
     </>
   )
@@ -328,7 +325,6 @@ const makeStyles = (colors, radius, space) => StyleSheet.create({
     marginBottom: space(3),
   },
   sectionTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
-  count: { fontSize: 14, color: colors.textMuted },
   list: { paddingHorizontal: space(4) },
 })
 
