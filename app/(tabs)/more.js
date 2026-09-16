@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import Button from '../../components/Button'
+import PopModal from '../../components/PopModal'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../lib/themeProvider'
 
@@ -16,6 +17,7 @@ export default function More() {
   const router = useRouter()
   const { colors, radius, space, shadow, pref, setPreference } = useTheme()
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [comingSoon, setComingSoon] = useState(null)
 
   const toggleSettings = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
@@ -30,8 +32,8 @@ export default function More() {
         <Text style={s.h1}>More</Text>
 
         <View style={s.group}>
-          <Row s={s} colors={colors} icon="help-circle-outline" label="Help" />
-          <Row s={s} colors={colors} icon="document-text-outline" label="Terms & Services" />
+          <Row s={s} colors={colors} icon="help-circle-outline" label="Help" chevron onPress={() => setComingSoon('Help')} />
+          <Row s={s} colors={colors} icon="document-text-outline" label="Terms & Services" chevron onPress={() => setComingSoon('Terms & Services')} />
 
           {/* Settings: inline accordion */}
           <TouchableOpacity style={s.row} onPress={toggleSettings} activeOpacity={0.7}>
@@ -46,9 +48,8 @@ export default function More() {
 
           {settingsOpen ? (
             <View style={s.accordion}>
-              <SubRow s={s} colors={colors} icon="notifications-outline" label="Notifications" />
-              <SubRow s={s} colors={colors} icon="lock-closed-outline" label="Privacy" />
-              <SubRow s={s} colors={colors} icon="information-circle-outline" label="About Lumenara" />
+              <SubRow s={s} colors={colors} icon="lock-closed-outline" label="Privacy" onPress={() => setComingSoon('Privacy')} />
+              <SubRow s={s} colors={colors} icon="information-circle-outline" label="About Lumenara" onPress={() => setComingSoon('About Lumenara')} />
 
               <View style={s.themeBlock}>
                 <View style={s.themeHeader}>
@@ -106,6 +107,13 @@ export default function More() {
 
         <View style={{ height: space(10) }} />
       </ScrollView>
+
+      <PopModal visible={!!comingSoon} onClose={() => setComingSoon(null)} title={comingSoon ?? ''}>
+        <Text style={{ fontSize: 16, color: colors.textMuted, lineHeight: 23 }}>
+          We're still working on this — check back in a future update.
+        </Text>
+        <Button title="Got it" onPress={() => setComingSoon(null)} style={{ marginTop: space(6) }} />
+      </PopModal>
     </SafeAreaView>
   )
 }

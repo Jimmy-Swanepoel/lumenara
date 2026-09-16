@@ -16,8 +16,9 @@ Row Level Security).
   admin
 - Browse, search, and filter events by category; save events; follow
   organisers
-- Organisers create/edit/cancel events with image upload (camera or library),
-  a themed calendar date picker, and a scroll-wheel time picker
+- Organisers create/edit/cancel events with image upload (a Take Photo /
+  Choose from Library prompt, for both event images and the organiser's own
+  avatar), a themed calendar date picker, and a scroll-wheel time picker
 - Editing or cancelling an event notifies everyone who saved it
 - Full dark mode (system/light/dark), themed end-to-end including the Android
   navigation bar
