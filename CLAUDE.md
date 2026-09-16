@@ -26,6 +26,9 @@ organisers; organisers create/manage events; admins approve organisers. Timezone
 - `lib/` — `supabase.ts`, `auth.js` (auth context), `api.js` (all Supabase queries),
   `themeProvider.js` (light/dark palettes + `useTheme()`), `theme.js` (CATEGORIES/categoryLabel/
   categoryStyle only — colours live in themeProvider), `format.js` (toISO, isPast, date formatters)
+- `supabase/functions/` — Supabase Edge Functions (Deno), deployed via the Supabase CLI (`npx supabase
+  functions deploy <name> --project-ref uytrqielaxckajbbnzhq`, already linked). Currently just
+  `reject-cleanup`. `supabase/.temp/` is CLI-local cache, gitignored.
 
 ## Key conventions
 - **Colours come from `useTheme()`**, not fixed values. Pattern: `const { colors, radius, space, shadow } = useTheme()`
@@ -65,18 +68,19 @@ organisers; organisers create/manage events; admins approve organisers. Timezone
 - Admin account: swanepoeljimmy7@gmail.com
 - Approve organiser via SQL (trigger blocks SQL editor as non-app-admin):
   `alter table organizers disable trigger organizers_status_guard; update organizers set status='approved' where contact_email='X'; alter table organizers enable trigger organizers_status_guard;`
-- **Rejected organiser cleanup — needs a one-time manual step.** `leave_rejected_organizer()` (added to
-  `supabase_edit_delete_functions.sql`) must be run once in the Supabase SQL editor before rejection
-  actually works end-to-end — it's not deployed anywhere automatically, that file is just tracked
-  source you apply by hand. Once it exists: rejecting via `admin/approvals.js` is unchanged (still
-  just flips `organizers.status` to `'rejected'`), and the rejected person's own client notices via
-  `RejectionGate` (mirrors `NotificationsGate`'s launch + AppState-foreground check) and shows an
-  undismissable popup; acknowledging it calls the RPC (deletes their `organizers` row, resets
-  `profiles.role` back to `'user'`) then signs them out locally. Deliberately server-side rather than
-  a client update to `profiles.role` — letting a user write their own role column, even narrowly, risks
-  self-promotion. **Does not delete the login itself** (needs the service-role key this project
-  doesn't hold) — that's still a manual "Delete user" in Supabase dashboard → Authentication → Users
-  if you want the email fully free to re-signup.
+- **Rejected organiser cleanup is fully automated, no manual step needed.** Rejecting via
+  `admin/approvals.js` is unchanged (still just flips `organizers.status` to `'rejected'`). The
+  rejected person's own client notices via `RejectionGate` (mirrors `NotificationsGate`'s launch +
+  AppState-foreground check) and shows an undismissable popup; acknowledging it calls
+  `deleteRejectedOrganizerAccount()` (`lib/api.js`), which invokes the **`reject-cleanup` Supabase Edge
+  Function** (`supabase/functions/reject-cleanup/index.ts`, already deployed) — that function verifies
+  the caller's own JWT, confirms their status is actually `'rejected'`, then deletes their `organizers`
+  row, `profiles` row, and the `auth.users` login itself via the Auth Admin API (the one operation that
+  needs the service-role key, which lives only inside the Edge Function, never in the app or repo).
+  Client then signs out locally. Result: a true guest with no lingering account — same email is free
+  to sign up fresh. Managed via the Supabase CLI (`npx supabase ...`, project already linked); redeploy
+  after editing the function with `npx supabase functions deploy reject-cleanup --project-ref
+  uytrqielaxckajbbnzhq`.
 
 ## Image upload pattern (reused for event images + avatars)
 ```js
@@ -168,3 +172,9 @@ Do NOT use `expo-file-system` readAsStringAsync (the base64 API broke). fetch→
   dashboard for a paused banner and Resume it (takes a few min).
 - Emulator sometimes loses internet after laptop sleep — cold-boot it (Device Manager → Cold Boot Now) if
   Chrome-in-emulator can't reach google.
+- **Supabase CLI is set up and the project is linked** (`npx supabase ...` — no global install; run via
+  `npx -y supabase@latest ...` if npx prompts to install). Auth is `SUPABASE_ACCESS_TOKEN` (a personal
+  access token), not a `supabase login` browser flow. This is what makes Edge Functions (like
+  `reject-cleanup`) possible — the service-role key itself is never in this repo or the app; it's
+  injected automatically into Edge Functions' runtime by Supabase, scoped to that server-side function
+  only.
