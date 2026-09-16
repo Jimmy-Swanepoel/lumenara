@@ -25,12 +25,20 @@ export default function EventCard({ event }) {
         ) : (
           <Text style={{ fontSize: 56 }}>{cat.emoji}</Text>
         )}
+      </View>
+
+      <View style={{ padding: space(4), flexDirection: 'row', alignItems: 'center', gap: space(3) }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{event.title}</Text>
+          <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: space(1.5) }}>
+            {formatCardDateTime(event.starts_at)}
+          </Text>
+        </View>
         <LinearGradient
           colors={gradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
-            position: 'absolute', top: space(3), right: space(3),
             paddingHorizontal: space(3), paddingVertical: space(1.5), borderRadius: radius.pill,
           }}
         >
@@ -38,13 +46,6 @@ export default function EventCard({ event }) {
             {categoryLabel(event.category)}
           </Text>
         </LinearGradient>
-      </View>
-
-      <View style={{ padding: space(4) }}>
-        <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{event.title}</Text>
-        <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: space(1.5) }}>
-          {formatCardDateTime(event.starts_at)}
-        </Text>
       </View>
     </TouchableOpacity>
   )
