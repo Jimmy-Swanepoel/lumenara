@@ -120,16 +120,26 @@ Do NOT use `expo-file-system` readAsStringAsync (the base64 API broke). fetch→
 - Fixed jittery/flickering `BlurView` backdrop on Android popups (`PopModal`, `BlurSheet`) by adding
   `experimentalBlurMethod="dimezisBlurView"` — expo-blur's default Android blur is a jumpy approximation.
 - Deleted unused `lib/mockData.js` and `lib/mockAuth.js` (no remaining references).
-- **Signup no longer requires a manual re-login.** After sign up, both `signUpUser`/`signUpOrganizer`
-  (`lib/auth.js`) pass `emailRedirectTo: Linking.createURL('auth/confirm')`, and the signup screens route to
-  a new `app/auth/confirm.js` ("check your email") screen instead of an Alert. Tapping the confirmation link
-  deep-links back into that screen carrying session tokens (same implicit/PKCE parsing as the reset-password
-  flow — extracted into a shared `parseAuthTokensFromUrl` in `lib/auth.js`), which establishes the session;
-  `AuthProvider` picks it up and the confirm screen auto-redirects to `/(tabs)`. Supabase Auth →
-  URL Configuration → Redirect URLs allow-list is `lumenara://**,exp://**` — covers both the EAS
-  build (`com.lumenara.app` custom scheme) and day-to-day Expo Go testing (`exp://` deep links).
-  Still to do: a real end-to-end test (tap an actual confirmation email link on the emulator) to
-  confirm the round trip works, not just the config.
+- **Signup no longer requires a manual re-login.** The signup screens route to `app/auth/confirm.js`
+  ("check your email") instead of an Alert. Tapping the confirmation link deep-links back into that screen
+  carrying session tokens (implicit/PKCE parsing shared with reset-password via `parseAuthTokensFromUrl` in
+  `lib/auth.js`), which establishes the session; `AuthProvider` picks it up and the confirm screen
+  auto-redirects to `/(tabs)`.
+- **Signup confirmation routes through a hosted fallback page, not straight to the app.**
+  `emailRedirectTo` (`lib/auth.js`'s `confirmEmailRedirect()`) points at the **`confirm-email` Edge
+  Function** (`supabase/functions/confirm-email`, deployed with `--no-verify-jwt`), passing the actual
+  live app deep link as a `to` query param (whatever `Linking.createURL('auth/confirm')` resolves to at
+  signup time — an EAS build's fixed `lumenara://` scheme, or Expo Go's ephemeral `exp://host:port`).
+  The page merges GoTrue's session tokens onto `to` client-side (hash fragment for implicit, `code` query
+  param for PKCE) and attempts that handoff via `window.location.href`. Same device, scheme the OS can
+  open → glimpsed for an instant before switching to the app, same UX as before. Different device, or
+  Expo Go (can't own the app's own `lumenara://` scheme the way a real build does) → the page stays up
+  and shows a plain "you're verified, tap to open" fallback instead of dead-ending. Auth redirect
+  allow-list is now `lumenara://**,exp://**,https://uytrqielaxckajbbnzhq.supabase.co/functions/v1/**`.
+  Site URL is still `http://localhost:3000` (unused by this flow since it sets its own `redirectTo`
+  explicitly, but worth fixing before it matters for anything else).
+  Still to do: a real end-to-end test (tap an actual confirmation email link, on the same device and on
+  a different one) to confirm the round trip works, not just the config.
 - **Create tab is fully absent for non-organisers**, not just hidden. It's conditionally rendered
   (`{isOrganizer ? <MaterialTopTabs.Screen name="create".../> : null}` in `app/(tabs)/_layout.js`),
   and `withLayoutContext(Navigator, undefined, true)` now passes `useOnlyUserDefinedScreens: true` —
