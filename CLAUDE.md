@@ -65,6 +65,18 @@ organisers; organisers create/manage events; admins approve organisers. Timezone
 - Admin account: swanepoeljimmy7@gmail.com
 - Approve organiser via SQL (trigger blocks SQL editor as non-app-admin):
   `alter table organizers disable trigger organizers_status_guard; update organizers set status='approved' where contact_email='X'; alter table organizers enable trigger organizers_status_guard;`
+- **Rejected organiser cleanup — needs a one-time manual step.** `leave_rejected_organizer()` (added to
+  `supabase_edit_delete_functions.sql`) must be run once in the Supabase SQL editor before rejection
+  actually works end-to-end — it's not deployed anywhere automatically, that file is just tracked
+  source you apply by hand. Once it exists: rejecting via `admin/approvals.js` is unchanged (still
+  just flips `organizers.status` to `'rejected'`), and the rejected person's own client notices via
+  `RejectionGate` (mirrors `NotificationsGate`'s launch + AppState-foreground check) and shows an
+  undismissable popup; acknowledging it calls the RPC (deletes their `organizers` row, resets
+  `profiles.role` back to `'user'`) then signs them out locally. Deliberately server-side rather than
+  a client update to `profiles.role` — letting a user write their own role column, even narrowly, risks
+  self-promotion. **Does not delete the login itself** (needs the service-role key this project
+  doesn't hold) — that's still a manual "Delete user" in Supabase dashboard → Authentication → Users
+  if you want the email fully free to re-signup.
 
 ## Image upload pattern (reused for event images + avatars)
 ```js
