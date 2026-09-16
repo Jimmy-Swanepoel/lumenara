@@ -1,6 +1,12 @@
-import { ScrollView, Text, TouchableOpacity } from 'react-native'
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from '../lib/themeProvider'
-import { CATEGORIES } from '../lib/theme'
+import { CATEGORIES, CATEGORY_GRADIENT } from '../lib/theme'
+
+// Resting state is an outline (gradient ring, card colour showing through);
+// the active filter fills solid with the same gradient - so selection state
+// reads at a glance without a second visual language on top of colour.
+const OUTLINE_WIDTH = 2
 
 export default function CategoryChips({ selected, onSelect }) {
   const { colors, radius, space } = useTheme()
@@ -12,19 +18,26 @@ export default function CategoryChips({ selected, onSelect }) {
     >
       {CATEGORIES.map((c) => {
         const active = c.key === selected
+        const gradient = CATEGORY_GRADIENT[c.key] ?? [colors.primary, colors.primary]
         return (
-          <TouchableOpacity
-            key={c.key}
-            onPress={() => onSelect(c.key)}
-            activeOpacity={0.8}
-            style={{
-              paddingHorizontal: space(5), paddingVertical: space(2.5), borderRadius: radius.pill,
-              backgroundColor: active ? colors.primary : colors.chipBg,
-            }}
-          >
-            <Text style={{ fontSize: 15, fontWeight: '600', color: active ? '#fff' : colors.text }}>
-              {c.label}
-            </Text>
+          <TouchableOpacity key={c.key} onPress={() => onSelect(c.key)} activeOpacity={0.8}>
+            <LinearGradient
+              colors={gradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: radius.pill, padding: active ? 0 : OUTLINE_WIDTH }}
+            >
+              <View style={{
+                borderRadius: radius.pill,
+                backgroundColor: active ? 'transparent' : colors.card,
+                paddingHorizontal: active ? space(5) : space(5) - OUTLINE_WIDTH,
+                paddingVertical: active ? space(2.5) : space(2.5) - OUTLINE_WIDTH,
+              }}>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: active ? '#fff' : colors.text }}>
+                  {c.label}
+                </Text>
+              </View>
+            </LinearGradient>
           </TouchableOpacity>
         )
       })}
