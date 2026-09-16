@@ -103,10 +103,11 @@ Do NOT use `expo-file-system` readAsStringAsync (the base64 API broke). fetch→
   a new `app/auth/confirm.js` ("check your email") screen instead of an Alert. Tapping the confirmation link
   deep-links back into that screen carrying session tokens (same implicit/PKCE parsing as the reset-password
   flow — extracted into a shared `parseAuthTokensFromUrl` in `lib/auth.js`), which establishes the session;
-  `AuthProvider` picks it up and the confirm screen auto-redirects to `/(tabs)`. **Needs verifying**: the
-  Supabase dashboard's Auth → URL Configuration → Redirect URLs allow-list must include this new
-  `.../--/auth/confirm` redirect (same allow-list the reset-password flow already needed an entry in) or the
-  confirmation link will bounce to the Site URL instead of back into the app.
+  `AuthProvider` picks it up and the confirm screen auto-redirects to `/(tabs)`. Supabase Auth →
+  URL Configuration → Redirect URLs allow-list is `lumenara://**,exp://**` — covers both the EAS
+  build (`com.lumenara.app` custom scheme) and day-to-day Expo Go testing (`exp://` deep links).
+  Still to do: a real end-to-end test (tap an actual confirmation email link on the emulator) to
+  confirm the round trip works, not just the config.
 
 ## Pending work
 ### Parked
