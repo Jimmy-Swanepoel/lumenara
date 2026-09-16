@@ -7,3 +7,4 @@ web-build/
 .DS_Store
 /android/
 .claude/
+supabase/.temp/

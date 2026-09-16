@@ -4,15 +4,15 @@ import PopModal from './PopModal'
 import Button from './Button'
 import { useAuth } from '../lib/auth'
 import { useTheme } from '../lib/themeProvider'
-import { leaveRejectedOrganizer } from '../lib/api'
+import { deleteRejectedOrganizerAccount } from '../lib/api'
 
 // Shown when an organiser application has been rejected. Checked on launch
 // and on foreground-return (same AppState pattern as NotificationsGate), by
 // watching auth.organizerStatus rather than polling separately. Undismissable
-// except via the button, which cleans up the now-defunct application
-// (leave_rejected_organizer RPC: deletes the organizers row, resets the
-// profile back to a plain 'user') and signs the person out - landing them
-// back at a normal guest/user experience instead of stuck in limbo.
+// except via the button, which fully wipes the account (see
+// deleteRejectedOrganizerAccount / the reject-cleanup Edge Function) and
+// signs the person out - landing them back as a true guest, not lingering as
+// a demoted 'user' account.
 export default function RejectionGate() {
   const auth = useAuth()
   const { colors, space } = useTheme()
@@ -37,9 +37,9 @@ export default function RejectionGate() {
   const acknowledge = async () => {
     setBusy(true)
     try {
-      await leaveRejectedOrganizer()
+      await deleteRejectedOrganizerAccount()
     } catch (e) {
-      console.log('leave rejected organizer error', e)
+      console.log('reject-cleanup error', e)
     } finally {
       setVisible(false)
       await auth.signOut()
@@ -49,8 +49,9 @@ export default function RejectionGate() {
   return (
     <PopModal visible={visible} onClose={() => {}} dismissable={false} title="Application not approved">
       <Text style={{ fontSize: 16, color: colors.textMuted, lineHeight: 23, marginBottom: space(6) }}>
-        Your organiser application wasn't approved this time. You'll be signed
-        out now - you're welcome to browse as a regular user, or sign up again.
+        Your organiser application wasn't approved this time. Your account
+        will be removed and you'll be signed out - you're welcome to sign up
+        again anytime.
       </Text>
       <Button title="OK" onPress={acknowledge} loading={busy} />
     </PopModal>
