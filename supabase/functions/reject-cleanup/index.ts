@@ -50,7 +50,12 @@ Deno.serve(async (req) => {
 
     // Explicit deletes first (harmless even if FK cascades already handle
     // this on auth user deletion below - belt and suspenders, and it means
-    // this still cleans up correctly if cascades aren't configured).
+    // this still cleans up correctly if cascades aren't configured). Events
+    // are included defensively: create.js is supposed to block event
+    // creation for anything other than an approved organizer, but this
+    // guarantees no event ever outlives the organizer that made it, even if
+    // one slipped through before that gate existed or from a race.
+    await admin.from('events').delete().eq('organizer_id', user.id)
     await admin.from('organizers').delete().eq('id', user.id)
     await admin.from('profiles').delete().eq('id', user.id)
 

@@ -34,15 +34,18 @@ export default function CreateEvent() {
     return path
   }
 
-  if (auth.isPending) {
+  if (!auth.isApprovedOrganizer) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.blocked}>
           <Ionicons name="time-outline" size={44} color={colors.accent} />
-          <Text style={styles.blockedTitle}>Account under review</Text>
+          <Text style={styles.blockedTitle}>
+            {auth.isPending ? 'Account under review' : 'Event creation unavailable'}
+          </Text>
           <Text style={styles.blockedBody}>
-            You'll be able to create events once an admin approves your
-            organiser account.
+            {auth.isPending
+              ? "You'll be able to create events once an admin approves your organiser account."
+              : "Your organiser account isn't approved for event creation right now."}
           </Text>
         </View>
       </SafeAreaView>
