@@ -16,21 +16,11 @@ export default function CreateEvent() {
   const styles = makeStyles(colors, space)
 
   const [busy, setBusy] = useState(false)
+  const [formKey, setFormKey] = useState(0)
 
   // Re-checks organiser status on every focus so an admin's approval (or a
   // suspension) shows up without the user having to sign out/in.
   useFocusEffect(useCallback(() => { auth.refresh() }, [auth.refresh]))
-
-  if (!auth.isOrganizer) {
-    return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.blocked}>
-          <Ionicons name="lock-closed-outline" size={40} color={colors.textMuted} />
-          <Text style={styles.blockedTitle}>Organisers only</Text>
-        </View>
-      </SafeAreaView>
-    )
-  }
 
   const uploadImage = async (uid, imageUri) => {
     if (!imageUri) return null
@@ -65,6 +55,7 @@ export default function CreateEvent() {
       const image_path = await uploadImage(auth.user.id, imageUri)
       await createEvent({ ...fields, image_path })
       Alert.alert('Event created', 'Your event is now live.')
+      setFormKey((k) => k + 1)
       router.replace('/(tabs)/account')
     } catch (e) {
       Alert.alert('Could not create event', e.message ?? 'Please try again.')
@@ -81,7 +72,7 @@ export default function CreateEvent() {
           <Text style={styles.sub}>Fill in the details for your event listing</Text>
         </View>
 
-        <EventForm initial={EMPTY_EVENT_FORM} submitLabel="Create Event" busy={busy} onSubmit={submit} />
+        <EventForm key={formKey} initial={EMPTY_EVENT_FORM} submitLabel="Create Event" busy={busy} onSubmit={submit} />
 
         <View style={{ height: space(10) }} />
       </ScrollView>

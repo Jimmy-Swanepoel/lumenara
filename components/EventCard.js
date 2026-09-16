@@ -37,13 +37,8 @@ export default function EventCard({ event }) {
       <View style={{ padding: space(4) }}>
         <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{event.title}</Text>
         <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: space(1.5) }}>
-          {'\u{1F4C5}'} {formatCardDateTime(event.starts_at)}
+          {formatCardDateTime(event.starts_at)}
         </Text>
-        {event.description ? (
-          <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: space(2), lineHeight: 20 }} numberOfLines={2}>
-            {event.description}
-          </Text>
-        ) : null}
       </View>
     </TouchableOpacity>
   )

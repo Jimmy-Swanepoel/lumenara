@@ -88,7 +88,21 @@ export default function EventForm({ initial, initialImageUrl = null, submitLabel
     return form.startDate
   })()
 
-  const pickImage = async () => {
+  const takeEventPhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync()
+    if (!perm.granted) {
+      Alert.alert('Permission needed', 'Please allow camera access to take an event photo.')
+      return
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.7,
+    })
+    if (!result.canceled) setImageUri(result.assets[0].uri)
+  }
+
+  const pickEventPhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!perm.granted) {
       Alert.alert('Permission needed', 'Please allow photo access to add an event image.')
@@ -101,6 +115,14 @@ export default function EventForm({ initial, initialImageUrl = null, submitLabel
       quality: 0.7,
     })
     if (!result.canceled) setImageUri(result.assets[0].uri)
+  }
+
+  const pickImage = () => {
+    Alert.alert('Event Picture', 'Add a photo from', [
+      { text: 'Take Photo', onPress: takeEventPhoto },
+      { text: 'Choose from Library', onPress: pickEventPhoto },
+      { text: 'Cancel', style: 'cancel' },
+    ])
   }
 
   const submit = () => {

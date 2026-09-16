@@ -14,15 +14,6 @@ const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5)
 function Wheel({ values, initial, onChange, colors }) {
   const ref = useRef(null)
   const initialIndex = Math.max(0, values.indexOf(initial))
-  const positioned = useRef(false)
-
-  // Position on layout - fires when the ScrollView is actually measured,
-  // so the first open lands on the correct value.
-  const onLayout = () => {
-    if (positioned.current) return
-    positioned.current = true
-    ref.current?.scrollTo({ y: initialIndex * ROW, animated: false })
-  }
 
   const settle = (y) => {
     const i = Math.max(0, Math.min(values.length - 1, Math.round(y / ROW)))
@@ -34,7 +25,7 @@ function Wheel({ values, initial, onChange, colors }) {
     <View style={{ height: ROW * VISIBLE, width: 90 }}>
       <ScrollView
         ref={ref}
-        onLayout={onLayout}
+        contentOffset={{ x: 0, y: initialIndex * ROW }}
         showsVerticalScrollIndicator={false}
         snapToInterval={ROW}
         decelerationRate="fast"

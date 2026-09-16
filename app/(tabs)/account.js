@@ -241,18 +241,35 @@ function OrganizerAccount() {
   const past = events.filter((e) => isPast(e.ends_at))
   const shown = tab === 'upcoming' ? upcoming : past
 
-  const pickAvatar = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
+  const pickAvatar = () => {
+    Alert.alert('Profile Picture', 'Add a photo from', [
+      { text: 'Take Photo', onPress: () => pickAvatarFrom('camera') },
+      { text: 'Choose from Library', onPress: () => pickAvatarFrom('library') },
+      { text: 'Cancel', style: 'cancel' },
+    ])
+  }
+
+  const pickAvatarFrom = async (source) => {
+    const perm = source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!perm.granted) {
-      Alert.alert('Permission needed', 'Please allow photo access to change your picture.')
+      Alert.alert(
+        'Permission needed',
+        source === 'camera'
+          ? 'Please allow camera access to take your picture.'
+          : 'Please allow photo access to change your picture.'
+      )
       return
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    })
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.7 })
+      : await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.7,
+        })
     if (result.canceled) return
     const uri = result.assets[0].uri
     setPickedAvatar(uri)

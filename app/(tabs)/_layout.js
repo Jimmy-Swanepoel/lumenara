@@ -16,7 +16,12 @@ import { useTheme } from '../../lib/themeProvider'
 // current screen off and the neighbouring one's real content into view -
 // no separate gesture handler or fake slide-in animation needed.
 const { Navigator } = createMaterialTopTabNavigator()
-const MaterialTopTabs = withLayoutContext(Navigator)
+// `useOnlyUserDefinedScreens: true` - without this, expo-router auto-injects
+// every file under app/(tabs)/ as an implicit extra screen even when it has
+// no explicit <Screen> here, appended after the declared ones. That defeated
+// the conditional `create` screen below (it kept reappearing at the end for
+// non-organisers instead of being excluded).
+const MaterialTopTabs = withLayoutContext(Navigator, undefined, true)
 
 const ICONS = {
   index: 'home-outline',
@@ -25,8 +30,6 @@ const ICONS = {
   more: 'menu-outline',
 }
 
-// Create is a real tab route (gated by href below) so it gets the same
-// persistent bottom tab bar and swipe behaviour as the other tabs.
 function BottomTabBar({ state, descriptors, navigation }) {
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
@@ -80,7 +83,7 @@ export default function TabsLayout() {
     >
       <MaterialTopTabs.Screen name="index" options={{ title: 'Home' }} />
       <MaterialTopTabs.Screen name="account" options={{ title: 'Account' }} />
-      <MaterialTopTabs.Screen name="create" options={{ title: 'Create', href: isOrganizer ? '/create' : null }} />
+      {isOrganizer ? <MaterialTopTabs.Screen name="create" options={{ title: 'Create' }} /> : null}
       <MaterialTopTabs.Screen name="more" options={{ title: 'More' }} />
     </MaterialTopTabs>
   )

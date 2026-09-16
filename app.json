@@ -23,7 +23,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Lumenara to access your photos to add event and profile images.",
+          "cameraPermission": "Allow Lumenara to access your camera to take event and profile photos."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false
