@@ -48,8 +48,13 @@ export default function EventDetail() {
     try {
       const ev = await fetchEventById(id)
       setEvent(ev)
-      const org = await fetchOrganizer(ev.organizer_id)
-      setOrganizer(org)
+      try {
+        const org = await fetchOrganizer(ev.organizer_id)
+        setOrganizer(org)
+      } catch (e) {
+        console.log('organizer fetch error', e)
+        setOrganizer(null)
+      }
       if (!auth.isGuest) {
         const ids = await fetchSavedIds()
         setSaved(ids.includes(id))

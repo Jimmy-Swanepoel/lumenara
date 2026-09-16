@@ -83,3 +83,37 @@ $$;
 revoke execute on function cancel_event(uuid, text) from public;
 revoke execute on function cancel_event(uuid, text) from anon;
 grant execute on function cancel_event to authenticated;
+
+-- Self-service cleanup for a rejected organiser application. Deliberately a
+-- security definer RPC rather than a client-side update to profiles.role:
+-- letting users update arbitrary columns on their own profile row (even just
+-- via a permissive RLS policy) would let anyone self-promote role to
+-- 'organizer' or worse - this function only ever sets role back to 'user'
+-- for the caller's own rejected application, nothing else.
+-- Note: this does NOT delete the underlying auth.users row (that needs the
+-- service-role key / Admin API, which this project doesn't hold client-side)
+-- - it just clears the app-level organiser state so the caller reverts to a
+-- normal user account. Deleting the login itself is a manual "Delete user"
+-- in the Supabase dashboard's Authentication > Users page, if wanted.
+create or replace function leave_rejected_organizer()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_status text;
+begin
+  select status into v_status from organizers where id = auth.uid();
+  if v_status is distinct from 'rejected' then
+    raise exception 'not a rejected organizer';
+  end if;
+
+  delete from organizers where id = auth.uid();
+  update profiles set role = 'user' where id = auth.uid();
+end;
+$$;
+
+revoke execute on function leave_rejected_organizer() from public;
+revoke execute on function leave_rejected_organizer() from anon;
+grant execute on function leave_rejected_organizer to authenticated;

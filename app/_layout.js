@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { AuthProvider } from '../lib/auth'
 import { ThemeProvider, useTheme } from '../lib/themeProvider'
 import NotificationsGate from '../components/NotificationsGate'
+import RejectionGate from '../components/RejectionGate'
 
 function ThemedStatusBar() {
   const { isDark } = useTheme()
@@ -34,6 +35,7 @@ export default function RootLayout() {
               <Stack.Screen name="admin/approvals" />
             </Stack>
             <NotificationsGate />
+            <RejectionGate />
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>
